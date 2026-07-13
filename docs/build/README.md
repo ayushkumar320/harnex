@@ -10,7 +10,7 @@ Every phase document contains a ready-to-use Codex prompt. The prompt is not a s
 | --- | --- | --- |
 | [0. Foundation](00-foundation.md) | Reproducible UV project, CLI shell, schemas, quality gates, and containers | None |
 | [1. Scanner and reports](01-scanner-and-report.md) | Read-only Python repository inventory, structural facts, and useful audit output | Phase 0 |
-| [2. Providers and retrieval](02-provider-and-retrieval.md) | Optional free-first model adapters and safe documentation retrieval | Phase 1 |
+| [2. Providers and evidence](02-provider-and-retrieval.md) | Free-first LLM adapters, local retrieval, and Tavily external evidence | Phase 1 |
 | [3. Findings and planning UX](03-findings-and-planning.md) | Evidence-backed findings, support tiers, reviewable plan, and stable CLI contract | Phases 1-2 |
 | [4. Constrained generation](04-constrained-generation.md) | Template generation, staged diffs, provenance, stale-plan checks, and safe reapply | Phase 3 |
 | [5. Runtime reliability](05-runtime-reliability.md) | Structured logs, failure normalization, side-effect-aware retries, and attempt ledger | Phase 4 |

@@ -47,7 +47,7 @@ The command immediately states that it is read-only, identifies the repository r
 - Artifact paths for JSON and detailed reports
 - One recommended next command
 
-No API key prompt appears during a deterministic scan.
+No API key prompt appears during structural inventory. A full audit explains which configured local or remote LLM it will use before interpretation begins.
 
 ### Reviewing a finding
 
@@ -146,7 +146,7 @@ Exact codes become versioned public API after Phase 1.
 ## Performance Expectations
 
 - Show meaningful progress within 300 ms for interactive commands.
-- Scan a small repository without model assistance in a few seconds.
+- Inventory a small repository without an LLM in a few seconds; report LLM interpretation time separately.
 - Cache only when cache validity is explainable.
 - Allow cancellation without leaving generated files or running containers behind.
 - Summaries should fit a typical terminal viewport; detailed evidence belongs in report files.

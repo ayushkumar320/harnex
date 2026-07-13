@@ -61,7 +61,7 @@ It should integrate with, not compete with, established systems:
 
 ### Evidence over confidence
 
-Every finding includes source location, rule or adapter, confidence, severity, and remediation. Model-written explanations cannot create a finding by themselves.
+Every finding includes source location, rule or adapter, confidence, severity, and remediation. The LLM may propose findings, but deterministic evidence binding and policy validation decide whether they become reportable artifacts.
 
 ### Unsupported is a valid result
 
@@ -71,13 +71,17 @@ AutoHarness must say what it could not understand. Unknown side effects and unsu
 
 Scanning is read-only. Plans are inspectable. Generated files include provenance. Reapplication uses a three-way comparison and never silently overwrites user edits.
 
-### Deterministic core
+### LLM reasoning with deterministic guardrails
 
-AST analysis, schema validation, retry state machines, path enforcement, template rendering, and security assertions do not depend on an LLM.
+The LLM is central to interpreting repository intent, combining evidence, producing findings and plans, and generating repository-specific adaptations. AST analysis, evidence binding, schema validation, retry state machines, path enforcement, permission checks, and security assertions remain deterministic so model reasoning cannot silently expand authority.
 
-### Free-first, provider-neutral assistance
+### Free-first, provider-neutral reasoning
 
-Development should work with no paid model. Optional assistance supports Hugging Face, Groq, and generic OpenAI-compatible endpoints. Free availability is treated as a runtime condition, not a permanent product assumption.
+Development should work with no paid model by supporting Groq, Hugging Face, and local or hosted OpenAI-compatible endpoints. A no-model run may produce structural inventory, but full interpretation is explicitly incomplete. Free availability is treated as a runtime condition, not a permanent product assumption.
+
+### Current external evidence
+
+For fast-changing SDKs and providers, Tavily can supply current official documentation, migration notes, and capability evidence to the LLM. Web retrieval is explicit, source-attributed, cached, credit-budgeted, and never treated as policy authority.
 
 ### Honest safety
 

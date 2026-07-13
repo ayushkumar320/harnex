@@ -35,7 +35,7 @@ A new user can install, scan a supported repository, understand the result, and 
 - Public claims cite measured results and test environment.
 - Package installs in a clean Python 3.12 environment.
 - Container builds reproducibly and runs as non-root.
-- First-run path works without model credentials.
+- Structural inventory works without credentials; full audit works with at least one documented free-tier or local model configuration.
 - No known critical security failure remains in supported capability tests.
 
 ## Out of Scope

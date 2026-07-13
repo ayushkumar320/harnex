@@ -17,7 +17,8 @@ The user can answer: what is wrong, why it matters, where the evidence is, how c
 - `harness plan` and versioned `HarnessPlan`.
 - Human and JSON output parity.
 - CI severity thresholds and stable exit codes.
-- Optional model-assisted explanations that cannot create or approve findings.
+- LLM evidence synthesis for candidate findings, explanations, remediation, and plans.
+- Deterministic evidence-binding, permission, support-tier, and schema validation.
 
 ## Deliverables
 
@@ -31,7 +32,7 @@ The user can answer: what is wrong, why it matters, where the evidence is, how c
 ## Acceptance Gates
 
 - Every finding cites deterministic evidence.
-- Model assistance changes wording only, never finding identity, severity, support, or legality.
+- Every accepted LLM finding cites valid structural or retrieved evidence and passes deterministic policy validation.
 - Unsupported and unknown coverage is visible in summary output.
 - `plan` rejects stale, partial, or incompatible scan artifacts.
 - Plan actions cite findings and declare permissions, files, dependencies, verification, and approval state.
@@ -59,10 +60,11 @@ Before editing:
 - Run previous phase gates and inspect current artifact schemas.
 - Define the initial finding catalog in writing before coding it.
 
-Implement findings:
+Implement LLM-core findings:
 - Create a versioned Finding schema with stable ID, title, description, severity, support tier, confidence, generation state, evidence, remediation, and references to detector/adapter versions.
-- Implement a small precise catalog: uninstrumented model call, broad retry around unknown side effect, unbounded retry, shell or filesystem tool without enforceable boundary, possible secret exposure to retrieval/logging, and unresolved dynamic registration.
-- Separate fact collection from policy evaluation.
+- Implement a small precise catalog and schemas for: uninstrumented model call, broad retry around unknown side effect, unbounded retry, shell or filesystem tool without enforceable boundary, possible secret exposure to retrieval/logging, and unresolved dynamic registration.
+- Ask the LLM to synthesize candidate findings from bounded EvidenceBundle inputs and require evidence IDs for every material claim.
+- Separate fact collection, LLM reasoning, and deterministic acceptance.
 - Derive support tier from verified adapter evidence, not model judgment.
 - Make confidence explainable through named factors rather than an opaque model number.
 - Add suppression with explicit reason, narrow scope, expiry option, and report visibility. Do not silently hide suppressed findings.
@@ -80,10 +82,11 @@ Implement `harness plan`:
 - Block actions for unknown or unsafe findings unless a documented user decision resolves them through a supported contract.
 - Hash source scan, config, adapters, and templates needed for later stale-plan detection.
 
-Model assistance:
-- May summarize evidence or draft remediation wording.
-- Cannot create or remove findings, change severity/support, approve actions, expand paths, or enable providers.
-- Assisted text must cite retrieved evidence and pass schema and redaction checks.
+LLM reasoning and guardrails:
+- The LLM proposes findings, severity rationale, explanations, remediation, and plan actions.
+- Deterministic validators reject nonexistent evidence, unsupported finding IDs, illegal severity values, invalid support claims, expanded paths, unapproved providers, and actions outside adapter capabilities.
+- The model cannot approve its own actions, create permissions, or override policy.
+- All material text must cite evidence and pass schema, privacy, and redaction checks.
 
 Testing and product validation:
 - Use labeled fixture repos to measure initial precision and false positives.

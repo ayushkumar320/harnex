@@ -15,5 +15,6 @@ pyyaml>=6,<7
 rapidfuzz>=3.10,<4
 rich>=13.9,<15
 structlog>=25,<26
+tavily-python>=0.7.26,<1
 tenacity>=9,<10
 typer>=0.16,<1

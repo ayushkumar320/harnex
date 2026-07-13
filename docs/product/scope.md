@@ -82,7 +82,7 @@ Support is attached to findings, not the whole repository. A repo may have a ver
 - Peak memory by source-file count
 - Model calls and tokens per assisted operation
 - Successful operation under free-tier rate limits
-- Useful behavior with model assistance disabled
+- Structural inventory quality with the LLM unavailable, clearly separated from full-audit quality
 
 ## Benchmark Corpus
 

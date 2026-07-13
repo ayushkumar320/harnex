@@ -11,6 +11,7 @@ This directory is the source of truth for product intent, architecture, developm
 | Security reviewer | [Security model](architecture/security.md) -> [Architecture](architecture/overview.md) -> [Sandbox phase](build/06-sandbox-enforcement.md) |
 | Implementation agent | [AGENTS.md](../AGENTS.md) -> active phase document -> linked architecture references |
 | Model-provider contributor | [Provider strategy](architecture/model-providers.md) -> [Provider phase](build/02-provider-and-retrieval.md) |
+| Web-evidence contributor | [External evidence](architecture/external-evidence.md) -> [Provider and retrieval phase](build/02-provider-and-retrieval.md) |
 
 ## Product
 
@@ -22,6 +23,7 @@ This directory is the source of truth for product intent, architecture, developm
 
 - [Architecture overview](architecture/overview.md): components, contracts, data flow, and lifecycle
 - [Model providers](architecture/model-providers.md): free-first provider abstraction and fallback behavior
+- [External evidence](architecture/external-evidence.md): Tavily search, documentation snapshots, provenance, privacy, and credit controls
 - [Security model](architecture/security.md): trust boundaries, retries, sandboxing, redaction, and verification
 
 ## Development

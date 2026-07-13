@@ -16,6 +16,7 @@ The developer feels that AutoHarness is assisting with a code change, not taking
 - Plan freshness and adapter compatibility checks.
 - Generated file manifest and provenance headers.
 - First deterministic generated artifacts: configuration, runner skeleton, JSONL logger interface, and tests for one verified direct-provider fixture.
+- LLM-generated repository-specific wiring staged behind deterministic file, schema, permission, and diff validation.
 - Three-way reapplication preserving user edits.
 - Atomic application and rollback on failure.
 
@@ -41,7 +42,7 @@ The developer feels that AutoHarness is assisting with a code change, not taking
 
 - Full runtime retry behavior
 - Target code execution
-- Model-generated source application
+- Unreviewed or unvalidated model-generated source application
 - Sandbox enforcement
 
 ## Detailed Codex Prompt
@@ -81,7 +82,8 @@ Initial generated slice:
 - Support exactly one verified direct-provider fixture shape.
 - Generate configuration, an entrypoint wrapper skeleton, a JSONL logging interface, and deterministic smoke tests.
 - Keep runtime retry and actual sandbox enforcement for later phases.
-- Do not apply model-generated source. Model assistance may draft comments or eval text only when clearly marked and approved.
+- Use the LLM for repository-specific wiring where templates alone are insufficient, but generate only inside approved staged paths.
+- Require evidence-linked generation intent, structured file manifests, syntax/schema validation, deterministic policy checks, human diff review, and explicit approval before applying model-generated source.
 
 UX requirements:
 - Show purpose-grouped changes, permissions, dependencies, files added/changed, unresolved decisions, and verification command.

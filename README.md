@@ -68,15 +68,19 @@ The first credible release is intentionally narrow:
 
 AutoHarness will report unsupported patterns instead of silently generating code for them.
 
-## Free-First Model Strategy
+## Free-First Model and Web-Evidence Strategy
 
-The scanner and policy engine are deterministic and work without a model. Model assistance is optional and used only for ambiguous summaries, documentation-grounded policy suggestions, draft adapters, and draft semantic evals.
+AutoHarness is LLM-core for repository interpretation, findings, planning, and repository-specific generation. Static scanning, evidence collection, schema validation, permission checks, and sandbox enforcement remain deterministic guardrails around that reasoning core.
+
+When remote model quota is unavailable, AutoHarness can use a configured local OpenAI-compatible model. A structural inventory can still run without a model, but it is clearly labeled as incomplete rather than presented as a full AutoHarness audit.
 
 The first provider adapters target:
 
 - [Hugging Face Inference](https://huggingface.co/docs/huggingface_hub/en/guides/inference)
 - [Groq's OpenAI-compatible API](https://console.groq.com/docs/openai)
 - Configurable OpenAI-compatible local or hosted endpoints
+
+Optional [Tavily](https://docs.tavily.com/) integration supplies current official SDK documentation, migration guidance, provider capabilities, and source-backed troubleshooting context to the LLM. Tavily is explicit, budgeted, cached, and never receives private source code by default.
 
 Free tiers, quotas, and available models change. AutoHarness therefore discovers provider capability at runtime and never assumes that a particular free model is permanently available.
 
@@ -118,6 +122,7 @@ The application image is not the sandbox backend. The sandbox backend uses a sep
 - [Scope and success metrics](docs/product/scope.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [Model-provider strategy](docs/architecture/model-providers.md)
+- [External web evidence](docs/architecture/external-evidence.md)
 - [Security model](docs/architecture/security.md)
 - [Development setup](docs/development/setup.md)
 - [Phase-by-phase build plan](docs/build/README.md)

@@ -73,13 +73,15 @@ CLI output must use plain language, stable terminology, restrained color, and me
 
 ## Model and Provider Rules
 
-- Core scanning and policy validation must work without an API key.
+- Structural scanning and policy validation must work without an API key; full interpretation and planning are LLM-core and must be labeled incomplete when no model is available.
 - Prefer free or locally available models for development, but never promise permanent free availability.
 - Support Groq, Hugging Face Inference, and generic OpenAI-compatible endpoints through one internal interface.
 - Provider-specific SDK objects must not cross the adapter boundary.
 - Log provider, model, latency, token usage when available, and normalized failure class; redact credentials and content by default.
 - Model-assisted output is always a proposal and must pass deterministic schema and policy validation.
 - Tests must use fakes or recorded contract fixtures, not paid or live model calls by default.
+- Treat Tavily as an `ExternalEvidenceProvider`, never as a model provider or policy authority.
+- Web enrichment must be explicit, credit-budgeted, cached, source-attributed, and restricted to non-sensitive queries and approved domains.
 
 ## Security and Privacy Rules
 

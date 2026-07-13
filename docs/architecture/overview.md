@@ -7,7 +7,10 @@ Repository snapshot
     -> deterministic inventory
     -> language and adapter detectors
     -> structural facts and evidence
-    -> optional local documentation retrieval
+    -> local documentation retrieval
+    -> optional Tavily external evidence
+    -> LLM evidence synthesis and candidate findings
+    -> deterministic evidence and policy validation
     -> normalized findings
     -> audit report
     -> optional validated plan
@@ -54,15 +57,27 @@ Adapters interpret facts for a declared compatibility range. Core adapter roles 
 
 An adapter declares versions, capabilities, confidence rules, fixtures, and conformance tests. Provider SDK objects never cross the adapter boundary.
 
-### Documentation retrieval
+### Local documentation retrieval
 
 Documentation is optional context, not authority. The MVP starts with lexical and fuzzy retrieval over README files, agent instructions, docs, public docstrings, examples, and test descriptions. Every retrieved chunk includes path, heading or symbol, line range, and content hash.
 
 Repository prose is delimited as untrusted evidence. It cannot alter system policy, enable network access, request secrets, or create a finding without deterministic support.
 
+### External evidence
+
+An `ExternalEvidenceProvider` supplies current public documentation and troubleshooting context. The first implementation uses Tavily Search and Extract with official-domain allowlists, explicit credit budgets, provenance, and content-addressed caching.
+
+External evidence is optional per command and never receives private source code by default. It is passed to the LLM as untrusted, cited context. See [External Evidence Architecture](external-evidence.md).
+
+### LLM reasoning core
+
+The LLM synthesizes structural facts, local documentation, and optional external evidence into candidate findings, explanations, plans, and repository-specific generation proposals. It is the core interpretation layer rather than a cosmetic summarizer.
+
+Deterministic validators bind every claim to evidence, enforce support tiers and permissions, reject unsupported actions, constrain output paths, and validate persistent schemas. The LLM can reason broadly but cannot grant itself authority.
+
 ### Finding engine
 
-Rules combine structural facts, adapter interpretation, and optional documentation evidence into normalized findings:
+The finding engine validates LLM-proposed findings against structural facts, adapter interpretation, local documentation, and optional external evidence before producing normalized findings:
 
 ```json
 {
@@ -96,11 +111,11 @@ Consumes findings and proposes a versioned `HarnessPlan`. It never writes files.
 - Verification checks
 - Confidence and approval status
 
-Model assistance may explain ambiguous evidence, but deterministic validation controls whether an action is legal.
+The LLM creates the plan from the validated evidence bundle. Deterministic validation controls whether each action is legal, supported, current, and within approved permissions.
 
 ### Generator
 
-Uses tested templates for retry state machines, logging schemas, sandbox adapters, and eval runners. Model-generated content is limited to reviewable drafts such as semantic cases or unsupported adapter suggestions.
+Uses tested templates for stable infrastructure and LLM generation for repository-specific adapters, wiring, explanations, and semantic drafts. All generated content is staged, source-attributed where applicable, schema-checked, path-constrained, and reviewed before application.
 
 Generation happens in staging. Paths are constrained under approved roots. Each generated file records generator version, plan hash, template version, and base content hash.
 
@@ -115,6 +130,8 @@ Persisted schemas include:
 - `RepositoryInventory`
 - `StructuralFact`
 - `RetrievedEvidence`
+- `ExternalEvidence`
+- `EvidenceBundle`
 - `Finding`
 - `AuditReport`
 - `HarnessPlan`
@@ -159,5 +176,6 @@ An adapter moves to `verified` only after:
 
 - [Security model](security.md)
 - [Model providers](model-providers.md)
+- [External evidence](external-evidence.md)
 - [Product scope](../product/scope.md)
 - [Build plan](../build/README.md)

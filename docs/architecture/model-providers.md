@@ -2,9 +2,9 @@
 
 ## Goal
 
-AutoHarness must remain useful without a model and affordable during development. Optional model assistance uses a provider-neutral contract with free-tier and local options first.
+AutoHarness is LLM-core for interpretation, planning, and repository-specific generation. The provider layer makes that reasoning portable across free-tier, local, and hosted models while deterministic guardrails preserve safety and artifact validity.
 
-No product behavior may assume that a specific model, quota, or free tier will remain available.
+No product behavior may assume that a specific model, quota, or free tier will remain available. When no model is reachable, AutoHarness may emit a structural inventory, but it must label the full audit and plan as incomplete.
 
 ## Initial Providers
 
@@ -47,6 +47,8 @@ Capabilities may include:
 - Maximum context and output limits
 
 The planner requests capabilities, not provider names. Missing capabilities cause a fallback, reduced feature, or explicit unsupported result.
+
+Tavily is not part of this provider fallback chain. It implements the separate `ExternalEvidenceProvider` contract described in [External Evidence Architecture](external-evidence.md).
 
 ## Fallback Policy
 

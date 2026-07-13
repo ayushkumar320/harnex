@@ -11,6 +11,7 @@ Security claims are capability-specific. AutoHarness must never report "sandboxe
 - Target repository files and metadata
 - Repository documentation and agent-instruction files
 - Model-provider requests and responses
+- Tavily queries and external web evidence
 - Generated source and configuration
 - Tool and subprocess output
 - Container or remote sandbox runtime
@@ -40,6 +41,16 @@ README files, `AGENTS.md`, docstrings, and test text may contain instructions ai
 - Approve a finding or generation action
 
 Security fixtures include common prompt-injection patterns.
+
+The same rule applies to web pages returned by Tavily. Search ranking and official-looking domains do not make retrieved content trusted.
+
+## External Evidence Privacy
+
+Tavily requests may contain public package names, versions, API symbols, official-domain filters, and narrowly phrased technical questions. They must not contain private repository names, source snippets, prompts, credentials, internal URLs, customer data, or secret-derived values without a separate explicit policy and preview.
+
+Web enrichment is off by default for private repositories, disabled during verification, and bounded by a per-command credit budget. Responses are cached with URL, domain, retrieval time, query hash, content hash, and expiration. Redirects and final domains are validated against policy.
+
+Tavily content is delimited as untrusted external evidence. It cannot create permissions, approve generation, change sandbox policy, select a remote model, or override local structural evidence.
 
 ## Secret Handling
 
@@ -113,6 +124,8 @@ Structured events pass through redaction before serialization. A logger failure 
 - Unsupported sandbox capability
 - Stale plan and user-modified generated file
 - Network call during default verification
+- Private repository detail included in a Tavily query
+- Redirect from an allowed documentation domain to an unapproved domain
 - Container process and resource-limit escape attempts appropriate to the supported backend
 
 ## Threat-Model Maintenance

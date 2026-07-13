@@ -7,7 +7,7 @@
 - Docker Engine with Compose v2 for container and sandbox phases
 - Git
 
-Provider credentials are optional. The deterministic scanner and default tests must work without them.
+Provider credentials are optional for structural scanning and default tests. Full audit and planning are LLM-core and require a configured local or remote model outside mocked tests.
 
 ## Local Environment
 
@@ -46,6 +46,7 @@ Provider options:
 - `groq` with `GROQ_API_KEY`
 - `huggingface` with `HF_TOKEN`
 - `openai_compatible` with base URL and API key
+- Tavily external evidence with `TAVILY_API_KEY`; it is not a model provider
 
 Never commit `.env` or tokens.
 
@@ -87,6 +88,7 @@ This Compose service is for the AutoHarness application. It is not the untrusted
 
 - Add a dependency only when the standard library or an existing package does not provide a clear implementation.
 - Keep provider SDKs behind adapters.
+- Keep Tavily behind the separate `ExternalEvidenceProvider` boundary.
 - Avoid heavyweight embedding or model-routing libraries until benchmarks justify them.
 - Use lexical retrieval first; local embeddings are optional.
 - Pin a reproducible lock before the first implementation release.
