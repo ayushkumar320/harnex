@@ -1,0 +1,22 @@
+services:
+  autoharness:
+    build:
+      context: .
+    image: autoharness:dev
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace:ro
+    environment:
+      AUTOHARNESS_MODEL_PROVIDER: ${AUTOHARNESS_MODEL_PROVIDER:-disabled}
+      AUTOHARNESS_MODEL_NAME: ${AUTOHARNESS_MODEL_NAME:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      HF_TOKEN: ${HF_TOKEN:-}
+      OPENAI_COMPATIBLE_BASE_URL: ${OPENAI_COMPATIBLE_BASE_URL:-}
+      OPENAI_COMPATIBLE_API_KEY: ${OPENAI_COMPATIBLE_API_KEY:-}
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

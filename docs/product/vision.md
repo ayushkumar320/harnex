@@ -1,0 +1,97 @@
+# Product Vision
+
+## The Problem
+
+AI agent projects often reach a convincing demo before they gain the controls needed for repeated use. Each repository then rebuilds the same supporting behavior:
+
+- Provider error classification and bounded retries
+- Side-effect and idempotency controls
+- Structured model and tool-call logs
+- Shell, filesystem, browser, and network isolation
+- Regression checks for prompts, models, and tools
+- Failure reports that explain what happened
+
+This infrastructure is easy to omit because it is not the agent's headline feature. When a run fails, the developer may not know whether the provider, model output, tool, policy, or application caused it.
+
+## The Vision
+
+AutoHarness is a reliability auditor first and a constrained generator second.
+
+It inspects an agent repository without executing it, identifies model calls, tool boundaries, entry points, external side effects, and missing reliability controls, and emits findings tied to source evidence. For verified patterns, it can propose a harness and apply a reviewed diff. Unsupported patterns remain useful findings rather than speculative code.
+
+The product principle is:
+
+> **Audit first, generate second.**
+
+## Why This Shape Is Credible
+
+The broad promise "make any agent production-ready" cannot be verified. Static analysis cannot fully resolve reflection, dynamic registration, runtime dependency injection, generated code, or unknown side effects.
+
+The focused promise is defensible:
+
+> Analyze documented Python agent patterns, explain reliability gaps with evidence, and generate tested controls only through verified adapters.
+
+The read-only audit is the initial product. Generation is an optional acceleration layer.
+
+## Product Workflow
+
+```text
+scan -> understand findings -> plan -> review -> apply -> verify -> monitor drift
+```
+
+1. `harness scan .` analyzes without importing or executing target code.
+2. `harness plan .` turns supported findings into a versioned proposal.
+3. The developer reviews permissions, assumptions, dependencies, and the diff.
+4. `harness apply .` writes only approved files.
+5. `harness verify .` exercises deterministic controls in isolation.
+6. `harness doctor .` detects missing providers, sandbox capabilities, stale plans, and drift.
+
+## Differentiation
+
+Observability products explain instrumented runs. Sandbox products isolate execution. Agent frameworks provide framework-native execution controls. AutoHarness focuses on the repository-analysis layer that connects these concerns.
+
+It should integrate with, not compete with, established systems:
+
+- Export logs or traces to LangSmith, Langfuse, or OpenTelemetry.
+- Use Docker or an isolated remote runtime as an enforcement backend.
+- Wrap supported framework entry points without forcing a rewrite.
+- Generate starter eval structures while leaving semantic oracle approval to the developer.
+
+## Product Principles
+
+### Evidence over confidence
+
+Every finding includes source location, rule or adapter, confidence, severity, and remediation. Model-written explanations cannot create a finding by themselves.
+
+### Unsupported is a valid result
+
+AutoHarness must say what it could not understand. Unknown side effects and unsupported adapters block generation but do not invalidate the audit.
+
+### Reversibility
+
+Scanning is read-only. Plans are inspectable. Generated files include provenance. Reapplication uses a three-way comparison and never silently overwrites user edits.
+
+### Deterministic core
+
+AST analysis, schema validation, retry state machines, path enforcement, template rendering, and security assertions do not depend on an LLM.
+
+### Free-first, provider-neutral assistance
+
+Development should work with no paid model. Optional assistance supports Hugging Face, Groq, and generic OpenAI-compatible endpoints. Free availability is treated as a runtime condition, not a permanent product assumption.
+
+### Honest safety
+
+A generated policy is not an enforcement boundary. A passing smoke test is not proof of safety. AutoHarness reports exactly what was tested and what remains unverified.
+
+## Long-Term Direction
+
+If the narrow MVP earns trust, AutoHarness can grow into:
+
+- A CI reliability policy that catches new unbounded calls or unsafe tools
+- A community adapter ecosystem with conformance tests
+- Baseline-to-current drift reporting
+- Framework and language expansion driven by benchmark evidence
+- Optional observability exporters and remote sandbox backends
+- A corpus of seeded agent reliability failures for evaluation
+
+The durable asset is not generated boilerplate. It is the evidence model, adapter contracts, conformance suite, and benchmark corpus.

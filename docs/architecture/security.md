@@ -1,0 +1,120 @@
+# Security Model
+
+## Security Position
+
+AutoHarness inspects and may later execute repositories that are buggy, compromised, or intentionally hostile. Its own model output is also untrusted.
+
+Security claims are capability-specific. AutoHarness must never report "sandboxed" or "verified" when only a configuration file exists.
+
+## Trust Boundaries
+
+- Target repository files and metadata
+- Repository documentation and agent-instruction files
+- Model-provider requests and responses
+- Generated source and configuration
+- Tool and subprocess output
+- Container or remote sandbox runtime
+- Host filesystem, credentials, and network
+
+## Scan Boundary
+
+`harness scan` must not:
+
+- Import target modules
+- Execute setup scripts, plugins, hooks, notebooks, or tests
+- Resolve code by running package managers
+- Follow symlinks outside the repository root
+- Read ignored secret files by default
+- Make a provider call unless the user explicitly enables model assistance
+
+The repository view normalizes paths, applies limits, records exclusions, and opens files as data.
+
+## Documentation Prompt Injection
+
+README files, `AGENTS.md`, docstrings, and test text may contain instructions aimed at the planner. Retrieved content is quoted and delimited as repository evidence. It cannot:
+
+- Change AutoHarness system policy
+- Enable a provider or network
+- Request secret access
+- Alter allowed output paths
+- Approve a finding or generation action
+
+Security fixtures include common prompt-injection patterns.
+
+## Secret Handling
+
+- Exclude `.env`, private keys, credential stores, and configured patterns from retrieval.
+- Scan values for secret-like tokens before logging or provider requests.
+- Redact headers, environment values, connection strings, and provider error bodies.
+- Keep raw prompt and output logging disabled by default.
+- Ensure debug mode uses the same redaction path.
+
+## Side-Effect Classification
+
+Every operation considered for retry is one of:
+
+- `read_only`
+- `idempotent` with a stable idempotency key
+- `transactional` with known commit or rollback
+- `non_idempotent`
+- `unknown`
+
+Automatic retry is allowed only for proven read-only operations or idempotent operations with a supported guarantee. If a timeout occurs after an unknown side effect may have committed, return `commit_status_unknown` and stop.
+
+Maintain an attempt ledger with operation ID, attempt, start, completion, normalized result, and provider idempotency key when applicable.
+
+## Sandbox Enforcement
+
+The MVP sandbox uses a dedicated rootless Docker execution backend with:
+
+- Non-root user
+- Read-only repository mount
+- Dedicated writable output and temporary mounts
+- Network denied by default
+- Dropped Linux capabilities
+- `no-new-privileges`
+- CPU, memory, process, and wall-clock limits
+- Explicit environment allowlist
+- Controlled executable interface
+
+Command-name deny lists are only defense in depth. They do not prevent interpreter, child-process, alias, encoding, or path-based bypasses.
+
+Path tests must cover traversal, absolute paths, symlinks, mount boundaries, case behavior, and time-of-check/time-of-use assumptions. If Docker cannot enforce a declared capability on the host platform, verification fails closed.
+
+The AutoHarness application container in the root `Dockerfile` is not the target-code sandbox.
+
+## Generation Safety
+
+- Generate into staging, never directly into arbitrary target paths.
+- Restrict output paths to the approved plan.
+- Reject absolute paths, traversal, symlink escapes, and unexpected file types.
+- Validate templates and schema before staging.
+- Show the diff before applying.
+- Record provenance and use three-way comparison on reapplication.
+- Never silently replace developer-edited generated files.
+
+## Verification Safety
+
+Verification uses a disposable worktree or sandbox, fixture credentials, mocked providers, and denied network. Importing or executing target code occurs only within this boundary.
+
+Live calls, package installation, network access, browser automation, database access, and destructive tools require separate explicit approval. Results identify anything not exercised.
+
+## Logging Safety
+
+Structured events pass through redaction before serialization. A logger failure must not crash a target operation or fall back to unredacted console output. Logs have bounded field sizes and prevent terminal-control injection in human rendering.
+
+## Required Negative Tests
+
+- Symlink and `..` repository escape
+- Secret in source, docs, exception, and provider response
+- Prompt injection in every indexed document type
+- Malicious filename and terminal-control sequence
+- Retry after a committed fake side effect
+- Unsupported sandbox capability
+- Stale plan and user-modified generated file
+- Network call during default verification
+- Container process and resource-limit escape attempts appropriate to the supported backend
+
+## Threat-Model Maintenance
+
+Every new adapter or execution capability updates this document and adds negative fixtures. Security review is required when a phase introduces target-code execution, new remote data flow, broader filesystem access, or a new sandbox backend.
