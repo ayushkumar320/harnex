@@ -11,6 +11,7 @@ Security claims are capability-specific. AutoHarness must never report "sandboxe
 - Target repository files and metadata
 - Repository documentation and agent-instruction files
 - Model-provider requests and responses
+- Provider-route configuration, health state, and cross-provider evidence transfer
 - Tavily queries and external web evidence
 - Generated source and configuration
 - Tool and subprocess output
@@ -59,6 +60,20 @@ Tavily content is delimited as untrusted external evidence. It cannot create per
 - Redact headers, environment values, connection strings, and provider error bodies.
 - Keep raw prompt and output logging disabled by default.
 - Ensure debug mode uses the same redaction path.
+
+## Provider Fallback Safety
+
+Fallback is permission-preserving, not an escape from an unavailable provider. Every route
+entry declares its locality and must be explicitly configured before repository evidence is
+built. `local_only` filters all remote destinations, including otherwise healthy fallbacks.
+Capability reduction cannot relax secret filtering, evidence bounds, output-path policy, or
+schema validation.
+
+All provider attempts for one logical request reference the same redacted evidence-manifest
+hash. Destination-specific context limits may remove evidence but cannot add unpreviewed
+content. Health and circuit-breaker records contain normalized failures and timing only, not
+prompts, outputs, credentials, or provider error bodies. Parallel hedged requests are not
+used because they unnecessarily disclose the same evidence to multiple services.
 
 ## Side-Effect Classification
 

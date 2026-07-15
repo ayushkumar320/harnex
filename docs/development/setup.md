@@ -33,13 +33,18 @@ uv sync --all-extras
 cp .env.example .env
 ```
 
-Default:
+Default (Phase 0):
 
 ```text
 AUTOHARNESS_MODEL_PROVIDER=disabled
 ```
 
 This is intentional. Only model-assisted tests need a configured provider.
+
+Phase 2 replaces the single selector with an ordered `model_assistance.route` in the project
+configuration. Environment variables provide secrets and model values for named route
+entries; they do not silently create or reorder destinations. See
+[Model-provider strategy](../architecture/model-providers.md).
 
 Provider options:
 
@@ -120,6 +125,11 @@ Check Docker Desktop file-sharing permissions. Do not weaken the read-only mount
 ### Provider test is rate limited
 
 The default suite should not be using the live provider. Confirm the live-test marker and provider environment are opt-in.
+
+For an assisted command, inspect `harness doctor` and the attempt artifact. A rate-limited
+route should be retried only when `Retry-After` fits the remaining deadline, then the next
+eligible configured route should be used. Do not increase the global timeout as the first
+remedy; confirm route order, cooldown state, and an independent fallback provider.
 
 ### A dependency range resolves differently
 

@@ -76,6 +76,7 @@ CLI output must use plain language, stable terminology, restrained color, and me
 - Structural scanning and policy validation must work without an API key; full interpretation and planning are LLM-core and must be labeled incomplete when no model is available.
 - Prefer free or locally available models for development, but never promise permanent free availability.
 - Support Groq, Hugging Face Inference, and generic OpenAI-compatible endpoints through one internal interface.
+- Route model assistance through an ordered, user-approved, deadline-bounded fallback chain; no provider, including Groq, may be a mandatory or hard-coded primary.
 - Provider-specific SDK objects must not cross the adapter boundary.
 - Log provider, model, latency, token usage when available, and normalized failure class; redact credentials and content by default.
 - Model-assisted output is always a proposal and must pass deterministic schema and policy validation.

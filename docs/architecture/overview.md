@@ -75,6 +75,12 @@ The LLM synthesizes structural facts, local documentation, and optional external
 
 Deterministic validators bind every claim to evidence, enforce support tiers and permissions, reject unsupported actions, constrain output paths, and validate persistent schemas. The LLM can reason broadly but cannot grant itself authority.
 
+The reasoning core requests capabilities from an ordered provider router rather than calling
+Groq or any other adapter directly. The router enforces locality, pre-authorized destinations,
+per-attempt and operation deadlines, circuit state, total attempt budgets, and explicit
+capability-reduction rules. Exhaustion returns a structural-only incomplete result instead of
+blocking the deterministic audit or mislabeling it as complete.
+
 ### Finding engine
 
 The finding engine validates LLM-proposed findings against structural facts, adapter interpretation, local documentation, and optional external evidence before producing normalized findings:

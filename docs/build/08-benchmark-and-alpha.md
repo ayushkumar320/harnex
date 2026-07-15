@@ -36,6 +36,8 @@ A new user can install, scan a supported repository, understand the result, and 
 - Package installs in a clean Python 3.12 environment.
 - Container builds reproducibly and runs as non-root.
 - Structural inventory works without credentials; full audit works with at least one documented free-tier or local model configuration.
+- Contract benchmarks prove a failed Groq route can fall back to both an independent remote
+  adapter and a local OpenAI-compatible adapter within the declared operation deadline.
 - No known critical security failure remains in supported capability tests.
 
 ## Out of Scope
@@ -76,6 +78,8 @@ Prepare the alpha:
 - Add changelog, version policy, schema compatibility policy, security reporting path, and release notes.
 - Add CI examples for advisory and enforcing scan thresholds.
 - Keep live provider tests optional and clearly report which provider capabilities were contract-tested versus live-tested.
+- Benchmark fallback latency, exact attempt ordering, circuit-open behavior, route exhaustion,
+  and evidence-manifest consistency without making live calls part of normal CI.
 
 First-time user UX:
 - Conduct a clean-room walkthrough from README only: install, help, scan fixture, inspect finding, create plan, dry-run apply, verify, doctor.

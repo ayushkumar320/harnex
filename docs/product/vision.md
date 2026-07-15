@@ -77,7 +77,7 @@ The LLM is central to interpreting repository intent, combining evidence, produc
 
 ### Free-first, provider-neutral reasoning
 
-Development should work with no paid model by supporting Groq, Hugging Face, and local or hosted OpenAI-compatible endpoints. A no-model run may produce structural inventory, but full interpretation is explicitly incomplete. Free availability is treated as a runtime condition, not a permanent product assumption.
+Development should work with no paid model by supporting Groq, Hugging Face, and local or hosted OpenAI-compatible endpoints through an ordered, user-approved fallback route. No provider is a mandatory primary. Per-attempt and operation deadlines bound waiting; route exhaustion still produces structural inventory, but full interpretation is explicitly incomplete. Free availability is treated as a runtime condition, not a permanent product assumption.
 
 ### Current external evidence
 

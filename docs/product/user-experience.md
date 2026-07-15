@@ -49,6 +49,17 @@ The command immediately states that it is read-only, identifies the repository r
 
 No API key prompt appears during structural inventory. A full audit explains which configured local or remote LLM it will use before interpretation begins.
 
+When more than one model route is configured, the command previews the ordered, eligible
+route and the total time budget. During fallback it reports concise status such as
+`groq_fast timed out; trying hf_backup (attempt 2 of 4)`. The final summary shows the provider
+that completed the operation and links to attempt provenance. It never implies that a
+fallback success was a primary success.
+
+If all routes fail, the command stops waiting at the declared deadline, preserves the
+structural inventory, and labels model interpretation and planning incomplete. The next
+action distinguishes missing credentials, temporary cooldown, capability mismatch, policy
+restriction, and total provider unavailability.
+
 ### Reviewing a finding
 
 A finding should answer five questions in this order:
@@ -116,6 +127,8 @@ The final report separates:
 - Keep stable finding and error codes for searchability.
 - Use color only to reinforce severity or status; output must remain readable without it.
 - Never use animated progress that hides a long or blocked operation.
+- Never leave provider waiting unbounded; show the operation deadline and allow immediate
+  cancellation.
 
 ## Output Modes
 

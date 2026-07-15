@@ -82,6 +82,11 @@ Support is attached to findings, not the whole repository. A repo may have a ver
 - Peak memory by source-file count
 - Model calls and tokens per assisted operation
 - Successful operation under free-tier rate limits
+- Fallback completion rate by normalized primary-provider failure class
+- P50/P95 assisted-operation latency, including fallback and exhaustion
+- Percentage of operations where one provider consumed the full operation deadline
+- Route-exhaustion rate and structural-only completion rate
+- Cross-provider request count and evidence-manifest consistency
 - Structural inventory quality with the LLM unavailable, clearly separated from full-audit quality
 
 ## Benchmark Corpus
@@ -89,6 +94,9 @@ Support is attached to findings, not the whole repository. A repo may have a ver
 Create `autoharness-bench` from 10 to 20 small repositories or fixtures with labeled ground truth and seeded failures:
 
 - Provider timeout before a response
+- Groq timeout followed by successful Hugging Face fallback
+- Remote provider failure followed by successful local OpenAI-compatible fallback
+- Open circuit, route exhaustion, and local-only rejection of remote fallback
 - Timeout after a fake side effect commits
 - Rate limiting with `Retry-After`
 - Malformed structured output

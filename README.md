@@ -72,7 +72,15 @@ AutoHarness will report unsupported patterns instead of silently generating code
 
 AutoHarness is LLM-core for repository interpretation, findings, planning, and repository-specific generation. Static scanning, evidence collection, schema validation, permission checks, and sandbox enforcement remain deterministic guardrails around that reasoning core.
 
-When remote model quota is unavailable, AutoHarness can use a configured local OpenAI-compatible model. A structural inventory can still run without a model, but it is clearly labeled as incomplete rather than presented as a full AutoHarness audit.
+Model assistance uses an ordered, user-approved route rather than a hard-coded Groq primary.
+A route may combine local OpenAI-compatible, Groq, and Hugging Face entries. Each attempt and
+the complete operation have bounded deadlines; transient failures receive limited retry,
+then the router moves to the next eligible provider without weakening the data policy.
+
+When every configured model is unavailable, a structural inventory still completes, but it
+is clearly labeled as incomplete rather than presented as a full AutoHarness audit. No remote
+system can promise zero timeouts; AutoHarness instead guarantees bounded waiting, visible
+fallback provenance, and no dependency on Groq alone.
 
 The first provider adapters target:
 

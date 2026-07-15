@@ -19,7 +19,8 @@ The user knows whether any repository content may leave the machine, sees which 
 - Official-domain policy, query privacy, content-addressed web cache, and credit ledger.
 - Bounded `EvidenceBundle` combining structural, local, and external evidence for the LLM.
 - Disabled, local-only, and remote-allowed data policies.
-- Bounded fallback and rate-limit behavior.
+- Ordered multi-provider routing, bounded fallback, circuit breaking, deadlines, and
+  rate-limit behavior.
 - Fake adapters and HTTP contract tests; live tests are opt-in.
 
 ## Deliverables
@@ -38,6 +39,12 @@ The user knows whether any repository content may leave the machine, sees which 
 - Every remote request can be traced to a previewed, redacted evidence set.
 - Missing credentials return a useful diagnostic without breaking deterministic features.
 - Provider fallback never violates local-only policy.
+- Groq timeout, quota exhaustion, missing credentials, or outage cannot prevent an eligible
+  configured Hugging Face or OpenAI-compatible route from being attempted.
+- Per-attempt and logical-operation deadlines bound total wait time; backoff and
+  `Retry-After` consume the same budget.
+- Route exhaustion produces a structural-only artifact with
+  `incomplete_model_unavailable`, exact attempt provenance, and no full-audit claim.
 - Fake and contract tests cover timeout, rate limit, malformed response, unsupported capability, auth failure, and redaction.
 - Prompt injection in indexed docs cannot change provider policy or output paths.
 - Tavily never receives private source, repository names, internal hosts, or raw stack traces by default.
@@ -80,13 +87,24 @@ Implement provider abstraction:
 - Keep SDK objects and error types inside adapters.
 - Probe or configure capabilities such as structured output, tool calls, streaming, token accounting, and context limits.
 - Normalize timeout, rate limit, unavailable, auth, invalid request, unsupported capability, and malformed response.
-- Respect Retry-After, jitter, attempt limits, and total elapsed budget.
+- Implement the ordered router in docs/architecture/model-providers.md. Groq must not be
+  hard-coded as primary or required.
+- Filter every route by data policy, locality, credentials, capabilities, limits, remaining
+  budget, cancellation, and circuit state before attempting it.
+- Respect Retry-After, seeded jitter, per-provider and total attempt limits, per-attempt
+  timeout, and one monotonic logical-operation deadline.
+- Persist only bounded redaction-safe health state and skip an open circuit until cooldown;
+  `doctor` owns repository-free recovery probes.
+- Permit reduced-capability JSON generation only when the request explicitly marks schema
+  enforcement optional, then validate locally.
 
 Data policy and UX:
 - Assistance is disabled by default.
 - Support local_only and remote_allowed policies.
 - Before a remote request, make the redacted evidence manifest inspectable in verbose or plan output.
-- Never silently fall back to another remote provider.
+- Preview the full approved route before sending evidence. Never fall back to an unlisted
+  destination; movement within the previewed route remains visible in events and the final
+  artifact.
 - `harness doctor` explains missing credentials, unavailable models, unsupported capabilities, and the deterministic fallback.
 - Do not promise that any model remains free. Report current provider failures plainly.
 
@@ -103,7 +121,11 @@ Testing:
 - Use fake providers and HTTP mocks for normal tests.
 - Add opt-in live markers with strict time/token budgets, but do not require credentials in CI.
 - Test secret redaction in docs, exceptions, HTTP bodies, and debug output.
-- Test prompt injection, provider fallback policy, cancellation, retry exhaustion, and deterministic retrieval ranking.
+- Test prompt injection, exact provider order, same-provider retry, cross-provider failover,
+  open-circuit skipping, cancellation, deadline exhaustion, capability reduction, route
+  exhaustion, and deterministic retrieval ranking.
+- Include explicit scenarios for Groq timeout -> Hugging Face success, Groq auth failure ->
+  local OpenAI-compatible success, and local-only -> zero remote calls.
 - Verify no network call occurs when assistance is disabled or local_only.
 - Test Tavily quota exhaustion, cache behavior, domain/redirect rejection, malformed content, prompt injection, private-query rejection, credit limits, and zero calls during verification.
 
