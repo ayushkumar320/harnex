@@ -8,6 +8,7 @@ This directory is the source of truth for product intent, architecture, developm
 | --- | --- |
 | New contributor | [Vision](product/vision.md) -> [User experience](product/user-experience.md) -> [Architecture](architecture/overview.md) -> [Setup](development/setup.md) |
 | Product reviewer | [Vision](product/vision.md) -> [Scope](product/scope.md) -> [Build plan](build/README.md) |
+| Final-year project reviewer | [Next plans](nextplans/README.md) -> [Benchmark and evaluation](nextplans/06-benchmark-and-final-evaluation.md) |
 | Security reviewer | [Security model](architecture/security.md) -> [Architecture](architecture/overview.md) -> [Sandbox phase](build/06-sandbox-enforcement.md) |
 | Implementation agent | [AGENTS.md](../AGENTS.md) -> active phase document -> linked architecture references |
 | Model-provider contributor | [Provider strategy](architecture/model-providers.md) -> [Provider phase](build/02-provider-and-retrieval.md) |
@@ -35,11 +36,20 @@ This directory is the source of truth for product intent, architecture, developm
 - [Build-plan index](build/README.md): phase order, dependencies, milestones, and delivery rules
 - Every phase has a self-contained Codex prompt, acceptance gates, product outcome, and UX target.
 
+## Next Plans
+
+- [Final-year extension roadmap](nextplans/README.md): optional prerequisite-gated plans for
+  one-command workflows, execution-risk visualization, policy as code, failure injection,
+  repair measurement, CI drift, and reproducible academic evaluation
+- Next plans do not replace the active build order and must not be presented as implemented
+  before their own acceptance gates and baseline prerequisites pass.
+
 ## Documentation Rules
 
 - Keep the root README concise and public-facing.
 - Put reasons and user outcomes in `product/`.
 - Put system contracts and invariants in `architecture/`.
 - Put executable delivery instructions in `build/`.
+- Put optional post-baseline and final-year extension plans in `nextplans/`.
 - Update [`AGENTS.md`](../AGENTS.md) when a rule applies to every phase.
 - Do not copy changing provider model names or free-tier quotas into multiple files.

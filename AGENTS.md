@@ -105,6 +105,7 @@ docs/product/           product intent and user experience
 docs/architecture/      system contracts and security design
 docs/development/       local and container workflows
 docs/build/             phase plans and implementation prompts
+docs/nextplans/         optional prerequisite-gated product and final-year extensions
 ```
 
 Use Python 3.12, type annotations, Pydantic at external boundaries, Typer for the CLI, Rich for human-readable output, and JSON for machine-readable artifacts. Manage environments with UV.

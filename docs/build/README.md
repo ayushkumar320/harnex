@@ -54,3 +54,11 @@ At the end of each phase, add a short implementation record to that phase docume
 - Decisions deferred to later phases
 
 Do not mark a phase complete while required behavior is stubbed, skipped, or dependent on undocumented manual steps.
+
+## Optional Next Plans
+
+After the relevant baseline phases pass, see the
+[final-year and product-extension roadmap](../nextplans/README.md). Those phases add
+one-command orchestration, risk visualization, policy as code, controlled failure injection,
+repair-effectiveness measurement, CI drift, and academic evaluation. They do not authorize
+skipping or reordering this build plan.
