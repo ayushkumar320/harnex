@@ -148,3 +148,27 @@ The LLM may produce schema-valid candidate findings in contract tests, but Phase
 - Still in progress: real Groq, Hugging Face, OpenAI-compatible, and Tavily adapters; HTTP contract
   tests; circuit persistence; cache TTL manifests; `--online`; evidence-bundle citation validation;
   and full Phase 2 acceptance completion.
+
+### 2026-07-15 Adapter Slice
+
+- Added injectable Groq/OpenAI-compatible and Hugging Face provider adapter boundaries that keep
+  SDK/client objects inside adapters and normalize OpenAI-like responses into `ModelResponse`.
+- Added provider error classification for timeout, authentication failure, rate limit with
+  `Retry-After`, provider unavailability, invalid requests, and malformed responses without
+  exposing provider error bodies or credentials.
+- Added adapter tests using fake clients only; no live provider calls are required.
+- Acceptance commands run successfully for the slice: `uv run ruff check .`,
+  `uv run ruff format --check .`, `uv run mypy src`, and `uv run pytest` (40 tests).
+
+### 2026-07-15 Tavily and Cache Slice
+
+- Added Tavily Search/Extract adapter scaffolding with an injectable client, official-domain
+  validation, query privacy checks, `include_answer=false`, basic search depth, result
+  normalization, and redirect/domain rejection by policy.
+- Added file-backed external-evidence cache artifacts with deterministic cache keys and TTL-based
+  expiration.
+- Added tests for Tavily search/extract normalization, official-domain filtering, budget
+  exhaustion, cache round-trip, and cache expiration. These tests use fake clients only and make no
+  live Tavily calls.
+- Acceptance commands run successfully for the slice: `uv run ruff check .`,
+  `uv run ruff format --check .`, `uv run mypy src`, and `uv run pytest` (43 tests).

@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Literal, Protocol
 from urllib.parse import urlparse
 
@@ -25,6 +28,15 @@ class EvidenceSearchRequest(BaseModel):
     query: str
     include_domains: list[str]
     max_results: int = 5
+    credits_remaining: int = 3
+
+
+class EvidenceExtractRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    urls: list[str]
+    query: str
+    include_domains: list[str]
     credits_remaining: int = 3
 
 
@@ -65,6 +77,14 @@ class ExternalEvidenceProvider(Protocol):
 
     async def search(self, request: EvidenceSearchRequest) -> list[ExternalEvidence]: ...
 
+    async def extract(self, request: EvidenceExtractRequest) -> list[ExternalEvidence]: ...
+
+
+class TavilyClient(Protocol):
+    def search(self, **kwargs: object) -> object: ...
+
+    def extract(self, **kwargs: object) -> object: ...
+
 
 @dataclass
 class FakeExternalEvidenceProvider:
@@ -87,6 +107,54 @@ class FakeExternalEvidenceProvider:
         filtered = [item for item in self.results if item.domain in allowed_domains]
         return filtered[: request.max_results]
 
+    async def extract(self, request: EvidenceExtractRequest) -> list[ExternalEvidence]:
+        self.calls += 1
+        validate_query_privacy(request.query)
+        if request.credits_remaining <= 0:
+            return []
+        allowed_domains = set(request.include_domains)
+        return [
+            item
+            for item in self.results
+            if item.final_url in request.urls and item.domain in allowed_domains
+        ]
+
+
+class TavilyExternalEvidenceProvider:
+    """Tavily Search/Extract adapter with injectable client for contract tests."""
+
+    def __init__(self, *, client: TavilyClient) -> None:
+        self.client = client
+
+    def capabilities(self) -> ExternalEvidenceCapabilities:
+        return ExternalEvidenceCapabilities()
+
+    def estimate_cost(self, request: EvidenceSearchRequest) -> CreditEstimate:
+        return estimate_search_cost(request)
+
+    async def search(self, request: EvidenceSearchRequest) -> list[ExternalEvidence]:
+        validate_query_privacy(request.query)
+        estimate = estimate_search_cost(request)
+        if not estimate.allowed:
+            return []
+        response = self.client.search(
+            query=request.query,
+            search_depth="basic",
+            include_answer=False,
+            include_domains=request.include_domains,
+            max_results=request.max_results,
+        )
+        return _normalize_search_response(response, request)
+
+    async def extract(self, request: EvidenceExtractRequest) -> list[ExternalEvidence]:
+        validate_query_privacy(request.query)
+        if request.credits_remaining <= 0:
+            return []
+        for url in request.urls:
+            validate_official_domain(url, request.include_domains)
+        response = self.client.extract(urls=request.urls)
+        return _normalize_extract_response(response, request)
+
 
 class ExternalEvidenceCache(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -98,6 +166,39 @@ class ExternalEvidenceCache(BaseModel):
 
     def put(self, request: EvidenceSearchRequest, evidence: list[ExternalEvidence]) -> None:
         self.entries[search_cache_key(request)] = evidence
+
+
+class FileExternalEvidenceCache:
+    def __init__(self, root: Path, *, ttl_days: int = 14) -> None:
+        self.root = root
+        self.ttl = timedelta(days=ttl_days)
+
+    def get(self, request: EvidenceSearchRequest) -> list[ExternalEvidence] | None:
+        path = self._path(request)
+        if not path.exists():
+            return None
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        created_at = datetime.fromisoformat(payload["created_at"])
+        if datetime.now(UTC) - created_at > self.ttl:
+            return None
+        return [ExternalEvidence.model_validate(item) for item in payload["evidence"]]
+
+    def put(self, request: EvidenceSearchRequest, evidence: list[ExternalEvidence]) -> None:
+        self.root.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "schema_version": "1.0",
+            "created_at": datetime.now(UTC).isoformat(),
+            "cache_key": search_cache_key(request),
+            "evidence": [item.model_dump(mode="json") for item in evidence],
+        }
+        self._path(request).write_text(
+            json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
+
+    def _path(self, request: EvidenceSearchRequest) -> Path:
+        filename = search_cache_key(request).removeprefix("sha256:") + ".json"
+        return self.root / filename
 
 
 def estimate_search_cost(request: EvidenceSearchRequest) -> CreditEstimate:
@@ -154,3 +255,83 @@ def external_evidence(
         credits_used=1,
         trust_label=trust_label,
     )
+
+
+def _normalize_search_response(
+    response: object,
+    request: EvidenceSearchRequest,
+) -> list[ExternalEvidence]:
+    results = _response_results(response)
+    evidence = []
+    for item in results[: request.max_results]:
+        url = str(_get(item, "url") or "")
+        title = str(_get(item, "title") or url)
+        text = str(_get(item, "content") or _get(item, "snippet") or "")
+        score = _float_value(_get(item, "score"))
+        if not url or not text:
+            continue
+        try:
+            accepted = external_evidence(
+                url=url,
+                title=title,
+                text=text,
+                query=request.query,
+                allowed_domains=request.include_domains,
+            )
+        except ValueError:
+            continue
+        evidence.append(accepted.model_copy(update={"relevance_score": score}))
+    return evidence
+
+
+def _normalize_extract_response(
+    response: object,
+    request: EvidenceExtractRequest,
+) -> list[ExternalEvidence]:
+    results = _response_results(response)
+    evidence = []
+    for item in results:
+        url = str(_get(item, "url") or _get(item, "raw_url") or "")
+        title = str(_get(item, "title") or url)
+        text = str(_get(item, "raw_content") or _get(item, "content") or "")
+        if not url or not text:
+            continue
+        try:
+            evidence.append(
+                external_evidence(
+                    url=url,
+                    title=title,
+                    text=text,
+                    query=request.query,
+                    allowed_domains=request.include_domains,
+                )
+            )
+        except ValueError:
+            continue
+    return evidence
+
+
+def _response_results(response: object) -> list[object]:
+    results = _get(response, "results")
+    if isinstance(results, list):
+        return results
+    if isinstance(response, list):
+        return response
+    return []
+
+
+def _get(obj: object, name: str) -> object | None:
+    if isinstance(obj, dict):
+        return obj.get(name)
+    return getattr(obj, name, None)
+
+
+def _float_value(value: object) -> float:
+    if isinstance(value, int | float):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except ValueError:
+            return 0
+    return 0
