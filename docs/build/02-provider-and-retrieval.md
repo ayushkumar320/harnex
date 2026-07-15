@@ -172,3 +172,15 @@ The LLM may produce schema-valid candidate findings in contract tests, but Phase
   live Tavily calls.
 - Acceptance commands run successfully for the slice: `uv run ruff check .`,
   `uv run ruff format --check .`, `uv run mypy src`, and `uv run pytest` (43 tests).
+
+### 2026-07-15 Router Provenance and Citation Slice
+
+- Added skipped-route provenance to router results so local-only policy skips, open circuits,
+  unsupported capabilities, missing provider registrations, and max-attempt skips are visible in
+  machine-readable artifacts.
+- Added optional JSON-schema capability reduction when schema enforcement is not required and the
+  route can still provide structured JSON for local validation.
+- Added deterministic citation validation for model outputs against structural, local, and external
+  evidence IDs. Phase 3 can use this before accepting candidate findings or plan actions.
+- Acceptance commands run successfully for the slice: `uv run ruff check .`,
+  `uv run ruff format --check .`, `uv run mypy src`, and `uv run pytest` (48 tests).

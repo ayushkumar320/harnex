@@ -142,6 +142,7 @@ class AttemptRecord(BaseModel):
     result: str
     latency_ms: int = 0
     failure_kind: FailureKind | None = None
+    skip_reason: str | None = None
     evidence_manifest_hash: str
 
 
@@ -151,6 +152,7 @@ class RouterResult(BaseModel):
     status: str
     response: ModelResponse | None = None
     attempts: list[AttemptRecord]
+    skipped: list[AttemptRecord] = Field(default_factory=list)
     incomplete_reason: str | None = None
 
 
@@ -201,15 +203,17 @@ class ModelRouter:
             return RouterResult(
                 status="incomplete_model_unavailable",
                 attempts=[],
+                skipped=[],
                 incomplete_reason="model_assistance_disabled",
             )
 
         attempts: list[AttemptRecord] = []
+        skipped: list[AttemptRecord] = []
         started = self._now()
         attempts_by_route: dict[str, int] = {}
 
         while len(attempts) < self.config.max_total_attempts:
-            entry = await self._next_eligible(request, attempts_by_route)
+            entry = await self._next_eligible(request, attempts_by_route, skipped)
             if entry is None:
                 break
             remaining = self.config.operation_seconds - (self._now() - started)
@@ -219,8 +223,9 @@ class ModelRouter:
             attempt_started = self._now()
             attempts_by_route[entry.id] = attempts_by_route.get(entry.id, 0) + 1
             try:
+                routed_request = request.model_copy(update={"model": entry.model})
                 response = await asyncio.wait_for(
-                    provider.complete(request.model_copy(update={"model": entry.model})),
+                    provider.complete(routed_request),
                     timeout=min(self.config.attempt_seconds, remaining),
                 )
             except TimeoutError:
@@ -241,11 +246,17 @@ class ModelRouter:
                     self._cooldown(entry, exc.failure)
                 continue
             attempts.append(self._attempt(entry, request, attempt_started, response=response))
-            return RouterResult(status="complete", response=response, attempts=attempts)
+            return RouterResult(
+                status="complete",
+                response=response,
+                attempts=attempts,
+                skipped=skipped,
+            )
 
         return RouterResult(
             status="incomplete_model_unavailable",
             attempts=attempts,
+            skipped=skipped,
             incomplete_reason="route_exhausted",
         )
 
@@ -253,21 +264,28 @@ class ModelRouter:
         self,
         request: ModelRequest,
         attempts_by_route: Mapping[str, int],
+        skipped: list[AttemptRecord],
     ) -> RouteEntry | None:
         for entry in self.config.route:
             if entry.id not in self.providers:
+                skipped.append(self._skip(entry, request, "provider_not_registered"))
                 continue
             if attempts_by_route.get(entry.id, 0) >= self.config.max_attempts_per_provider:
+                skipped.append(self._skip(entry, request, "max_attempts_reached"))
                 continue
             if (
                 self.config.data_policy is DataPolicy.LOCAL_ONLY
                 and entry.locality is ProviderLocality.REMOTE
             ):
+                skipped.append(self._skip(entry, request, "local_only_policy"))
                 continue
             if self.open_circuits.get(entry.id, 0) > self._now():
+                skipped.append(self._skip(entry, request, "circuit_open"))
                 continue
             capabilities = await self.providers[entry.id].capabilities()
-            if not _supports(request.required_capabilities, capabilities):
+            supported, reason = _supports_request(request, capabilities, self.config)
+            if not supported:
+                skipped.append(self._skip(entry, request, reason))
                 continue
             return entry
         return None
@@ -289,6 +307,16 @@ class ModelRouter:
             result="success" if response is not None else "failure",
             latency_ms=latency_ms,
             failure_kind=failure.kind if failure else None,
+            evidence_manifest_hash=request.evidence_manifest.manifest_hash,
+        )
+
+    def _skip(self, entry: RouteEntry, request: ModelRequest, reason: str) -> AttemptRecord:
+        return AttemptRecord(
+            route_id=entry.id,
+            provider=entry.provider,
+            model=entry.model,
+            result="skipped",
+            skip_reason=reason,
             evidence_manifest_hash=request.evidence_manifest.manifest_hash,
         )
 
@@ -316,6 +344,20 @@ def build_manifest(
     )
 
 
-def _supports(required: Sequence[str], capabilities: ProviderCapabilities) -> bool:
+def _supports_request(
+    request: ModelRequest,
+    capabilities: ProviderCapabilities,
+    config: RouterConfig,
+) -> tuple[bool, str]:
     values = capabilities.model_dump()
-    return all(bool(values.get(name)) for name in required)
+    missing = [name for name in request.required_capabilities if not bool(values.get(name))]
+    if not missing:
+        return True, ""
+    if (
+        missing == ["json_schema"]
+        and not request.schema_enforcement_required
+        and config.allow_capability_reduction
+        and capabilities.structured_json
+    ):
+        return True, "capability_reduction_json_schema_local_validation"
+    return False, "unsupported_capability:" + ",".join(missing)

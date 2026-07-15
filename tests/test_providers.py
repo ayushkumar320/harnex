@@ -93,6 +93,7 @@ async def test_router_local_only_makes_zero_remote_calls() -> None:
 
     assert result.status == "incomplete_model_unavailable"
     assert result.attempts == []
+    assert result.skipped[0].skip_reason == "local_only_policy"
     assert remote_provider.calls == 0
 
 
@@ -110,3 +111,117 @@ async def test_router_disabled_returns_structural_only_without_attempts() -> Non
     assert result.status == "incomplete_model_unavailable"
     assert result.incomplete_reason == "model_assistance_disabled"
     assert result.attempts == []
+
+
+@pytest.mark.asyncio
+async def test_router_skips_open_circuit_and_uses_next_provider() -> None:
+    manifest = build_manifest(data_policy=DataPolicy.REMOTE_ALLOWED, local_evidence_ids=["local:1"])
+    request = ModelRequest(
+        messages=[{"role": "user", "content": "hi"}],
+        model="unused",
+        evidence_manifest=manifest,
+    )
+    config = RouterConfig(
+        enabled=True,
+        data_policy=DataPolicy.REMOTE_ALLOWED,
+        route=[
+            RouteEntry(
+                id="groq_fast",
+                provider=ProviderKind.GROQ,
+                model="g",
+                locality=ProviderLocality.REMOTE,
+            ),
+            RouteEntry(
+                id="local",
+                provider=ProviderKind.OPENAI_COMPATIBLE,
+                model="l",
+                locality=ProviderLocality.LOCAL,
+            ),
+        ],
+    )
+    providers = {
+        "groq_fast": FakeModelProvider(
+            ProviderCapabilities(),
+            [ModelResponse(content="no", finish_reason="stop", latency_ms=1)],
+        ),
+        "local": FakeModelProvider(
+            ProviderCapabilities(),
+            [ModelResponse(content="ok", finish_reason="stop", latency_ms=1)],
+        ),
+    }
+    router = ModelRouter(config, providers)
+    router.open_circuits["groq_fast"] = 9999999999
+
+    result = await router.complete(request)
+
+    assert result.response is not None
+    assert result.response.content == "ok"
+    assert result.skipped[0].route_id == "groq_fast"
+    assert result.skipped[0].skip_reason == "circuit_open"
+
+
+@pytest.mark.asyncio
+async def test_router_allows_optional_json_schema_capability_reduction() -> None:
+    manifest = build_manifest(data_policy=DataPolicy.REMOTE_ALLOWED, local_evidence_ids=["local:1"])
+    request = ModelRequest(
+        messages=[{"role": "user", "content": "json"}],
+        model="unused",
+        required_capabilities=["chat_completion", "json_schema"],
+        schema_enforcement_required=False,
+        evidence_manifest=manifest,
+    )
+    provider = FakeModelProvider(
+        ProviderCapabilities(structured_json=True, json_schema=False),
+        [ModelResponse(content='{"ok": true}', finish_reason="stop", latency_ms=1)],
+    )
+    config = RouterConfig(
+        enabled=True,
+        data_policy=DataPolicy.REMOTE_ALLOWED,
+        route=[
+            RouteEntry(
+                id="jsonish",
+                provider=ProviderKind.OPENAI_COMPATIBLE,
+                model="j",
+                locality=ProviderLocality.REMOTE,
+            )
+        ],
+    )
+
+    result = await ModelRouter(config, {"jsonish": provider}).complete(request)
+
+    assert result.status == "complete"
+    assert provider.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_router_rejects_required_json_schema_without_capability() -> None:
+    manifest = build_manifest(data_policy=DataPolicy.REMOTE_ALLOWED, local_evidence_ids=["local:1"])
+    request = ModelRequest(
+        messages=[{"role": "user", "content": "json"}],
+        model="unused",
+        required_capabilities=["chat_completion", "json_schema"],
+        schema_enforcement_required=True,
+        evidence_manifest=manifest,
+    )
+    provider = FakeModelProvider(
+        ProviderCapabilities(structured_json=True, json_schema=False),
+        [ModelResponse(content='{"ok": true}', finish_reason="stop", latency_ms=1)],
+    )
+    config = RouterConfig(
+        enabled=True,
+        data_policy=DataPolicy.REMOTE_ALLOWED,
+        route=[
+            RouteEntry(
+                id="jsonish",
+                provider=ProviderKind.OPENAI_COMPATIBLE,
+                model="j",
+                locality=ProviderLocality.REMOTE,
+            )
+        ],
+    )
+
+    result = await ModelRouter(config, {"jsonish": provider}).complete(request)
+
+    assert result.status == "incomplete_model_unavailable"
+    assert result.skipped[0].skip_reason == "unsupported_capability:json_schema"
+    assert provider.calls == 0
