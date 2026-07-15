@@ -184,3 +184,18 @@ The LLM may produce schema-valid candidate findings in contract tests, but Phase
   evidence IDs. Phase 3 can use this before accepting candidate findings or plan actions.
 - Acceptance commands run successfully for the slice: `uv run ruff check .`,
   `uv run ruff format --check .`, `uv run mypy src`, and `uv run pytest` (48 tests).
+
+### 2026-07-15 Online Scan Evidence-Bundle Slice
+
+- Added explicit `harness scan --online` wiring that builds a bounded local `EvidenceBundle`
+  from repository documentation and docstrings while preserving the default zero-provider,
+  zero-network scan behavior.
+- Added optional evidence-bundle fields to `AuditReport`; default scans keep the prior canonical
+  JSON shape because empty enrichment is omitted.
+- When web evidence is not enabled in configuration, online scans record
+  `web_evidence_disabled` rather than attempting external retrieval or implying current-web
+  validation happened.
+- Added tests proving local evidence is included, secret-like `.env` contents are excluded, JSON
+  output carries the evidence bundle, and default golden JSON remains stable.
+- Acceptance commands run successfully for the slice: `uv run ruff check .`,
+  `uv run ruff format --check .`, `uv run mypy src`, and `uv run pytest` (50 tests).

@@ -206,3 +206,36 @@ def test_basic_agent_matches_golden_json_schema_fixture() -> None:
     normalized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
     assert normalized == (GOLDEN / "basic_agent_report.json").read_text(encoding="utf-8").strip()
+
+
+def test_online_scan_builds_local_evidence_bundle_without_web_calls(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    write(repo / "README.md", "# Agent\n\nUses OpenAI docs.\n")
+    write(repo / ".env", "OPENAI_API_KEY=sk-secret\n")
+    write(repo / "agent.py", "def run():\n    return None\n")
+
+    report = scan_repository(repo, online=True, web_evidence_enabled=False)
+    payload = canonical_json(report)
+
+    assert report.evidence_bundle is not None
+    assert report.evidence_bundle.incomplete_reason == "web_evidence_disabled"
+    assert len(report.evidence_bundle.local_evidence) == 1
+    assert report.evidence_bundle.external_evidence == []
+    assert "sk-secret" not in payload
+
+
+def test_cli_online_json_reports_evidence_bundle(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    output = tmp_path / "scan.json"
+    write(repo / "README.md", "# Agent\n\nUses OpenAI docs.\n")
+    write(repo / "agent.py", "def run():\n    return None\n")
+
+    result = runner.invoke(
+        app,
+        ["scan", str(repo), "--online", "--format", "json", "--output", str(output)],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["evidence_bundle"]["incomplete_reason"] == "web_evidence_disabled"
+    assert payload["evidence_bundle"]["local_evidence"][0]["path"] == "README.md"

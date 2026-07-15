@@ -6,6 +6,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from autoharness.retrieval_models import EvidenceBundle
+
 
 class ScanConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -88,5 +90,6 @@ class AuditReport(BaseModel):
     repository: RepositoryInventory
     facts: list[StructuralFact]
     parse_failures: list[ParseFailure]
+    evidence_bundle: EvidenceBundle | None = None
     summary: ScanSummary
     next_action: str

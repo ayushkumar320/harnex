@@ -126,6 +126,13 @@ def scan(
         int,
         typer.Option("--max-file-bytes", help="Maximum file size to read during inventory."),
     ] = 1_000_000,
+    online: Annotated[
+        bool,
+        typer.Option(
+            "--online",
+            help="Build an evidence bundle for online enrichment; web calls require config.",
+        ),
+    ] = False,
     output_format: Annotated[
         str | None,
         typer.Option("--format", help="Output format for this command: human or json."),
@@ -158,7 +165,12 @@ def scan(
         )
         configure_logging(config.log_level)
         console = make_console(color=ColorMode(config.color), quiet=quiet)
-        report = scan_repository(path, max_file_bytes=max_file_bytes)
+        report = scan_repository(
+            path,
+            max_file_bytes=max_file_bytes,
+            online=online,
+            web_evidence_enabled=config.web_evidence.enabled,
+        )
         artifact_path = output if output.is_absolute() else Path.cwd() / output
         write_report(artifact_path, report)
         if OutputFormat(config.output_format) is OutputFormat.JSON:

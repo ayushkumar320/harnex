@@ -90,6 +90,12 @@ def render_human_summary(console: Console, report: AuditReport, *, artifact_path
     table.add_row("Model call candidates", str(summary.model_call_candidates))
     table.add_row("Side-effect candidates", str(summary.side_effect_candidates))
     table.add_row("Unknown dynamic patterns", str(summary.unknown_dynamic_patterns))
+    if report.evidence_bundle is not None:
+        table.add_row("Local evidence chunks", str(len(report.evidence_bundle.local_evidence)))
+        table.add_row(
+            "External evidence chunks",
+            str(len(report.evidence_bundle.external_evidence)),
+        )
     console.print(table)
     console.print(f"Detailed JSON: {artifact_path}")
     console.print(f"Next: {report.next_action}")
