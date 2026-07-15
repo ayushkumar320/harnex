@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -20,6 +21,15 @@ PRIVATE_QUERY_PATTERNS = (
     re.compile(r"(?i)(api[_-]?key|secret|token|password)\s*="),
     re.compile(r"(?i)(internal|localhost|127\.0\.0\.1|corp\.|private)"),
 )
+
+OFFICIAL_DOMAINS_BY_PACKAGE = {
+    "groq": ["console.groq.com"],
+    "huggingface": ["huggingface.co"],
+    "langchain": ["python.langchain.com"],
+    "langgraph": ["langchain-ai.github.io"],
+    "openai": ["platform.openai.com"],
+    "tavily": ["docs.tavily.com"],
+}
 
 
 class EvidenceSearchRequest(BaseModel):
@@ -156,6 +166,15 @@ class TavilyExternalEvidenceProvider:
         return _normalize_extract_response(response, request)
 
 
+def build_tavily_provider_from_env() -> TavilyExternalEvidenceProvider | None:
+    api_key = os.environ.get("TAVILY_API_KEY")
+    if not api_key:
+        return None
+    from tavily import TavilyClient as RealTavilyClient  # type: ignore[import-untyped]
+
+    return TavilyExternalEvidenceProvider(client=RealTavilyClient(api_key=api_key))
+
+
 class ExternalEvidenceCache(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -199,6 +218,69 @@ class FileExternalEvidenceCache:
     def _path(self, request: EvidenceSearchRequest) -> Path:
         filename = search_cache_key(request).removeprefix("sha256:") + ".json"
         return self.root / filename
+
+
+async def collect_external_evidence(
+    *,
+    local_texts: list[str],
+    config: WebEvidenceConfig,
+    provider: ExternalEvidenceProvider | None,
+    cache: FileExternalEvidenceCache | None,
+) -> tuple[list[ExternalEvidence], str | None]:
+    """Collect bounded official external evidence for public package names only."""
+
+    if not config.enabled:
+        return [], "web_evidence_disabled"
+    if provider is None:
+        return [], "web_evidence_unavailable"
+
+    plans = plan_public_queries(local_texts, max_queries=config.max_credits_per_command)
+    if not plans:
+        return [], "no_public_web_queries"
+
+    credits_remaining = config.max_credits_per_command
+    collected: list[ExternalEvidence] = []
+    seen_ids: set[str] = set()
+    for query, domains in plans:
+        request = EvidenceSearchRequest(
+            query=query,
+            include_domains=domains,
+            max_results=config.max_results,
+            credits_remaining=credits_remaining,
+        )
+        cached = cache.get(request) if cache is not None else None
+        if cached is not None:
+            for item in cached:
+                if item.id not in seen_ids:
+                    collected.append(item)
+                    seen_ids.add(item.id)
+            continue
+        estimate = provider.estimate_cost(request)
+        if not estimate.allowed or estimate.estimated_credits > credits_remaining:
+            return collected, estimate.reason or "budget_exhausted"
+        fresh = await provider.search(request)
+        credits_used = max(estimate.estimated_credits, sum(item.credits_used for item in fresh))
+        credits_remaining -= credits_used
+        if cache is not None:
+            cache.put(request, fresh)
+        for item in fresh:
+            if item.id not in seen_ids:
+                collected.append(item)
+                seen_ids.add(item.id)
+        if credits_remaining <= 0:
+            break
+    return collected, None if collected else "external_evidence_empty"
+
+
+def plan_public_queries(local_texts: list[str], *, max_queries: int) -> list[tuple[str, list[str]]]:
+    text = "\n".join(local_texts).lower()
+    plans: list[tuple[str, list[str]]] = []
+    for package, domains in sorted(OFFICIAL_DOMAINS_BY_PACKAGE.items()):
+        if package in text:
+            plans.append((f"{package} official documentation agent reliability", domains))
+        if len(plans) >= max_queries:
+            break
+    return plans
 
 
 def estimate_search_cost(request: EvidenceSearchRequest) -> CreditEstimate:

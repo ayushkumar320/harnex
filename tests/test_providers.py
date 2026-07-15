@@ -4,6 +4,7 @@ from autoharness.providers import (
     DataPolicy,
     FailureKind,
     FakeModelProvider,
+    FileCircuitStore,
     ModelRequest,
     ModelResponse,
     ModelRouter,
@@ -225,3 +226,47 @@ async def test_router_rejects_required_json_schema_without_capability() -> None:
     assert result.status == "incomplete_model_unavailable"
     assert result.skipped[0].skip_reason == "unsupported_capability:json_schema"
     assert provider.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_router_persists_redaction_safe_circuit_state(tmp_path) -> None:
+    manifest = build_manifest(data_policy=DataPolicy.REMOTE_ALLOWED, local_evidence_ids=["local:1"])
+    request = ModelRequest(
+        messages=[{"role": "user", "content": "hi"}],
+        model="unused",
+        evidence_manifest=manifest,
+    )
+    config = RouterConfig(
+        enabled=True,
+        data_policy=DataPolicy.REMOTE_ALLOWED,
+        route=[
+            RouteEntry(
+                id="groq_fast",
+                provider=ProviderKind.GROQ,
+                model="g",
+                locality=ProviderLocality.REMOTE,
+            )
+        ],
+        max_attempts_per_provider=1,
+        max_total_attempts=1,
+    )
+    provider = FakeModelProvider(
+        ProviderCapabilities(),
+        [ProviderFailure(kind=FailureKind.PROVIDER_UNAVAILABLE, message="down sk-secret")],
+    )
+    store = FileCircuitStore(tmp_path / "provider-health.json")
+
+    result = await ModelRouter(config, {"groq_fast": provider}, circuit_store=store).complete(
+        request
+    )
+    second = await ModelRouter(
+        config,
+        {"groq_fast": FakeModelProvider(ProviderCapabilities(), [])},
+        circuit_store=store,
+    ).complete(request)
+
+    payload = (tmp_path / "provider-health.json").read_text(encoding="utf-8")
+    assert result.status == "incomplete_model_unavailable"
+    assert second.skipped[0].skip_reason == "circuit_open"
+    assert "provider_unavailable" in payload
+    assert "sk-secret" not in payload

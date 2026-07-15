@@ -14,7 +14,13 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 from autoharness.errors import ConfigurationError, ErrorContext
 from autoharness.external_evidence import WebEvidenceConfig
 from autoharness.output import ColorMode, OutputFormat
-from autoharness.providers import RouterConfig
+from autoharness.providers import (
+    DataPolicy,
+    ProviderKind,
+    ProviderLocality,
+    RouteEntry,
+    RouterConfig,
+)
 
 
 class LogLevel(StrEnum):
@@ -112,6 +118,11 @@ def load_config(overrides: ConfigOverrides | None = None) -> AppConfig:
                 value=_coerce_env_value(field, raw_value),
                 source=Source.ENVIRONMENT,
             )
+            if field == "model_provider":
+                values["model_assistance"] = ConfigValue(
+                    value=_router_from_legacy_provider(raw_value),
+                    source=Source.ENVIRONMENT,
+                )
 
     if "AUTOHARNESS_WEB_EVIDENCE_ENABLED" in os.environ:
         web = _mapping_value(values["web_evidence"].value)
@@ -225,6 +236,59 @@ def _mapping_value(value: Any) -> dict[str, Any]:
     if isinstance(value, Mapping):
         return dict(value)
     return {}
+
+
+def _router_from_legacy_provider(provider: str) -> RouterConfig:
+    normalized = provider.lower()
+    if normalized == ModelProvider.DISABLED:
+        return RouterConfig()
+    if normalized == ModelProvider.GROQ:
+        return RouterConfig(
+            enabled=True,
+            data_policy=DataPolicy.REMOTE_ALLOWED,
+            route=[
+                RouteEntry(
+                    id="groq_env",
+                    provider=ProviderKind.GROQ,
+                    model=os.environ.get("AUTOHARNESS_GROQ_MODEL", "llama-3.1-8b-instant"),
+                    locality=ProviderLocality.REMOTE,
+                )
+            ],
+        )
+    if normalized == ModelProvider.HUGGINGFACE:
+        model = os.environ.get("AUTOHARNESS_HF_MODEL", "meta-llama/Llama-3.1-8B-Instruct")
+        return RouterConfig(
+            enabled=True,
+            data_policy=DataPolicy.REMOTE_ALLOWED,
+            route=[
+                RouteEntry(
+                    id="hf_env",
+                    provider=ProviderKind.HUGGINGFACE,
+                    model=model,
+                    locality=ProviderLocality.REMOTE,
+                )
+            ],
+        )
+    if normalized == ModelProvider.OPENAI_COMPATIBLE:
+        base_url = os.environ.get("OPENAI_COMPATIBLE_BASE_URL", "http://127.0.0.1:11434/v1")
+        return RouterConfig(
+            enabled=True,
+            data_policy=DataPolicy.LOCAL_ONLY
+            if base_url.startswith(("http://127.0.0.1", "http://localhost"))
+            else DataPolicy.REMOTE_ALLOWED,
+            route=[
+                RouteEntry(
+                    id="openai_compatible_env",
+                    provider=ProviderKind.OPENAI_COMPATIBLE,
+                    model=os.environ.get("AUTOHARNESS_OPENAI_COMPATIBLE_MODEL", "local-model"),
+                    locality=ProviderLocality.LOCAL
+                    if base_url.startswith(("http://127.0.0.1", "http://localhost"))
+                    else ProviderLocality.REMOTE,
+                    base_url=base_url,
+                )
+            ],
+        )
+    return RouterConfig()
 
 
 def _expected_for(field: str) -> str:

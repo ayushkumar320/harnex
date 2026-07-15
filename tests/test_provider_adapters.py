@@ -5,6 +5,7 @@ import pytest
 from autoharness.provider_adapters import (
     HuggingFaceProvider,
     OpenAICompatibleProvider,
+    build_configured_providers,
     classify_provider_error,
 )
 from autoharness.providers import (
@@ -12,6 +13,10 @@ from autoharness.providers import (
     FailureKind,
     ModelRequest,
     ProviderFailureException,
+    ProviderKind,
+    ProviderLocality,
+    RouteEntry,
+    RouterConfig,
     build_manifest,
 )
 
@@ -117,3 +122,23 @@ async def test_adapter_raises_normalized_failure_for_malformed_response() -> Non
         await provider.complete(request())
 
     assert exc_info.value.failure.kind is FailureKind.MALFORMED_RESPONSE
+
+
+def test_provider_factory_leaves_missing_remote_credentials_unregistered(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    config = RouterConfig(
+        enabled=True,
+        data_policy=DataPolicy.REMOTE_ALLOWED,
+        route=[
+            RouteEntry(
+                id="groq_fast",
+                provider=ProviderKind.GROQ,
+                model="llama",
+                locality=ProviderLocality.REMOTE,
+            )
+        ],
+    )
+
+    assert build_configured_providers(config) == {}

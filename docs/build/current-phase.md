@@ -1,26 +1,19 @@
 # Current Phase
 
-We are building [Phase 2: Providers and evidence](02-provider-and-retrieval.md).
+[Phase 2: Providers and evidence](02-provider-and-retrieval.md) is complete.
 
-Current status: Phase 2 is in progress, not complete.
+Verified Phase 2 capabilities:
 
-Completed slices:
+- Local documentation/docstring retrieval with secret and path filtering.
+- Provider/router contracts, fake providers, and `harness doctor` diagnostics.
+- Groq, Hugging Face, OpenAI-compatible, and Tavily adapter wiring from config/env.
+- Router provenance, optional JSON capability reduction, citation validation, and persisted
+  redaction-safe circuit state.
+- `harness scan --online` evidence bundles with local evidence, approved official-domain web
+  query planning, Tavily cache integration, and no web calls unless explicitly enabled.
+- Default scan remains structural, read-only, and offline.
 
-- Local retrieval over docs and docstrings.
-- Provider/router contracts, fake providers, and `harness doctor`.
-- Provider adapter boundaries.
-- Tavily/search/extract/cache scaffolding with fake clients.
-- Router provenance and citation validation.
-- `harness scan --online` local evidence bundle.
-
-Remaining before Phase 2 completion:
-
-- Real Groq, Hugging Face, OpenAI-compatible, and Tavily wiring from config/env.
-- HTTP contract tests/mocks for provider and Tavily behavior.
-- Circuit persistence and richer provider diagnostics.
-- External evidence cache integration into `scan --online`.
-- Final Phase 2 acceptance gates and completion record.
-
-Note: the latest `scan --online` evidence-bundle slice may still be uncommitted.
+Next planned phase: [Phase 3: Findings and planning](03-findings-and-planning.md). Phase 3 has
+not started.
 
 This pointer is intentionally simple. Update it when work moves to the next phase.

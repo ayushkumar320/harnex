@@ -102,3 +102,40 @@ web_evidence:
     assert config.model_assistance.route[0].id == "local"
     assert config.model_assistance.attempt_seconds == 1
     assert config.web_evidence.max_credits_per_command == 1
+
+
+def test_legacy_provider_env_builds_route_without_yaml(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AUTOHARNESS_MODEL_PROVIDER", "openai_compatible")
+    monkeypatch.setenv("OPENAI_COMPATIBLE_BASE_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setenv("AUTOHARNESS_OPENAI_COMPATIBLE_MODEL", "local-demo")
+
+    config = load_config()
+
+    assert config.model_assistance.enabled is True
+    assert config.model_assistance.data_policy == "local_only"
+    assert config.model_assistance.route[0].id == "openai_compatible_env"
+    assert config.model_assistance.route[0].model == "local-demo"
+
+
+def test_route_config_rejects_duplicate_ids(tmp_path: Path) -> None:
+    config_file = tmp_path / "autoharness.yaml"
+    config_file.write_text(
+        """
+model_assistance:
+  enabled: true
+  data_policy: remote_allowed
+  route:
+    - id: duplicate
+      provider: groq
+      model: llama
+      locality: remote
+    - id: duplicate
+      provider: huggingface
+      model: hf
+      locality: remote
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigurationError):
+        load_config(ConfigOverrides(config_path=config_file))

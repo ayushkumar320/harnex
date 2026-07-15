@@ -19,8 +19,10 @@ def doctor_report(config: AppConfig) -> dict[str, Any]:
                 "provider": entry.provider.value,
                 "model": entry.model,
                 "locality": entry.locality.value,
+                "base_url_configured": bool(entry.base_url),
                 "configured": not missing,
                 "missing": missing,
+                "diagnostic": _route_diagnostic(entry.provider, entry.locality, missing),
             }
         )
     return {
@@ -36,9 +38,15 @@ def doctor_report(config: AppConfig) -> dict[str, Any]:
         "web_evidence": {
             "enabled": config.web_evidence.enabled,
             "provider": config.web_evidence.provider,
+            "official_domains_only": config.web_evidence.official_domains_only,
             "max_credits_per_command": config.web_evidence.max_credits_per_command,
             "missing": (
                 [] if _has_tavily_key() or not config.web_evidence.enabled else ["TAVILY_API_KEY"]
+            ),
+            "diagnostic": (
+                "ready_for_online_scan"
+                if _has_tavily_key() or not config.web_evidence.enabled
+                else "missing_credentials"
             ),
         },
     }
@@ -60,3 +68,17 @@ def _missing_credentials(provider: ProviderKind, locality: ProviderLocality) -> 
 
 def _has_tavily_key() -> bool:
     return bool(os.environ.get("TAVILY_API_KEY"))
+
+
+def _route_diagnostic(
+    provider: ProviderKind,
+    locality: ProviderLocality,
+    missing: list[str],
+) -> str:
+    if missing:
+        return "missing_credentials"
+    if locality is ProviderLocality.LOCAL:
+        return "configured_local_endpoint_not_probed"
+    if provider is ProviderKind.OPENAI_COMPATIBLE:
+        return "configured_remote_endpoint_not_probed"
+    return "configured_remote_provider_not_probed"

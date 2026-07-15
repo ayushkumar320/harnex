@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 from typing import Protocol
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from autoharness.retrieval_models import EvidenceManifest
 
@@ -111,6 +113,14 @@ class DeadlineConfig(BaseModel):
     attempt_seconds: float = 8
     operation_seconds: float = 45
 
+    @model_validator(mode="after")
+    def validate_deadlines(self) -> DeadlineConfig:
+        if self.attempt_seconds <= 0 or self.operation_seconds <= 0:
+            raise ValueError("provider deadlines must be positive")
+        if self.attempt_seconds > self.operation_seconds:
+            raise ValueError("attempt deadline must fit inside operation deadline")
+        return self
+
 
 class RouterConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -123,6 +133,36 @@ class RouterConfig(BaseModel):
     max_total_attempts: int = 4
     cooldown_seconds: float = 60
     allow_capability_reduction: bool = True
+
+    @field_validator("max_attempts_per_provider", "max_total_attempts")
+    @classmethod
+    def positive_attempts(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("attempt limits must be positive")
+        return value
+
+    @field_validator("cooldown_seconds")
+    @classmethod
+    def non_negative_cooldown(cls, value: float) -> float:
+        if value < 0:
+            raise ValueError("cooldown must be non-negative")
+        return value
+
+    @model_validator(mode="after")
+    def validate_route(self) -> RouterConfig:
+        route_ids = [entry.id for entry in self.route]
+        if len(route_ids) != len(set(route_ids)):
+            raise ValueError("route ids must be unique")
+        if self.enabled and self.data_policy is DataPolicy.DISABLED:
+            raise ValueError(
+                "enabled model assistance requires local_only or remote_allowed policy"
+            )
+        for entry in self.route:
+            if entry.base_url and _looks_local_url(entry.base_url) != (
+                entry.locality is ProviderLocality.LOCAL
+            ):
+                raise ValueError("route base_url locality must match the declared locality")
+        return self
 
     @property
     def attempt_seconds(self) -> float:
@@ -154,6 +194,50 @@ class RouterResult(BaseModel):
     attempts: list[AttemptRecord]
     skipped: list[AttemptRecord] = Field(default_factory=list)
     incomplete_reason: str | None = None
+
+
+class CircuitRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    route_id: str
+    failure_kind: FailureKind
+    consecutive_transient_failures: int
+    cooldown_until: float
+
+
+class FileCircuitStore:
+    """Bounded redaction-safe provider health state."""
+
+    def __init__(self, path: Path, *, max_records: int = 64) -> None:
+        self.path = path
+        self.max_records = max_records
+
+    def load(self) -> dict[str, CircuitRecord]:
+        if not self.path.exists():
+            return {}
+        payload = json.loads(self.path.read_text(encoding="utf-8"))
+        records = payload.get("records", {})
+        if not isinstance(records, dict):
+            return {}
+        return {
+            route_id: CircuitRecord.model_validate(record)
+            for route_id, record in records.items()
+            if isinstance(record, dict)
+        }
+
+    def save(self, records: Mapping[str, CircuitRecord]) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        bounded = dict(sorted(records.items())[: self.max_records])
+        payload = {
+            "schema_version": "1.0",
+            "records": {
+                route_id: record.model_dump(mode="json") for route_id, record in bounded.items()
+            },
+        }
+        self.path.write_text(
+            json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
 
 
 class ModelProvider(Protocol):
@@ -192,11 +276,18 @@ class ModelRouter:
         providers: Mapping[str, ModelProvider],
         *,
         monotonic: object = time.monotonic,
+        circuit_store: FileCircuitStore | None = None,
     ) -> None:
         self.config = config
         self.providers = providers
         self.monotonic = monotonic
-        self.open_circuits: dict[str, float] = {}
+        self.circuit_store = circuit_store
+        self.circuits: dict[str, CircuitRecord] = (
+            circuit_store.load() if circuit_store is not None else {}
+        )
+        self.open_circuits: dict[str, float] = {
+            route_id: record.cooldown_until for route_id, record in self.circuits.items()
+        }
 
     async def complete(self, request: ModelRequest) -> RouterResult:
         if not self.config.enabled or self.config.data_policy is DataPolicy.DISABLED:
@@ -322,7 +413,18 @@ class ModelRouter:
 
     def _cooldown(self, entry: RouteEntry, failure: ProviderFailure) -> None:
         delay = failure.retry_after_seconds or self.config.cooldown_seconds
-        self.open_circuits[entry.id] = self._now() + delay
+        prior = self.circuits.get(entry.id)
+        self.circuits[entry.id] = CircuitRecord(
+            route_id=entry.id,
+            failure_kind=failure.kind,
+            consecutive_transient_failures=(
+                (prior.consecutive_transient_failures + 1) if prior is not None else 1
+            ),
+            cooldown_until=self._now() + delay,
+        )
+        self.open_circuits[entry.id] = self.circuits[entry.id].cooldown_until
+        if self.circuit_store is not None:
+            self.circuit_store.save(self.circuits)
 
     def _now(self) -> float:
         return float(self.monotonic())  # type: ignore[operator]
@@ -361,3 +463,12 @@ def _supports_request(
     ):
         return True, "capability_reduction_json_schema_local_validation"
     return False, "unsupported_capability:" + ",".join(missing)
+
+
+def _looks_local_url(url: str) -> bool:
+    lowered = url.lower()
+    return (
+        lowered.startswith("http://127.0.0.1")
+        or lowered.startswith("http://localhost")
+        or lowered.startswith("http://[::1]")
+    )

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import os
 import time
 from typing import Any
 
@@ -15,6 +16,9 @@ from autoharness.providers import (
     ProviderCapabilities,
     ProviderFailure,
     ProviderFailureException,
+    ProviderKind,
+    ProviderLocality,
+    RouterConfig,
     TokenUsage,
 )
 
@@ -77,6 +81,48 @@ class HuggingFaceProvider:
         except Exception as exc:
             raise ProviderFailureException(classify_provider_error(exc)) from exc
         return _openai_like_response(result, started)
+
+
+def build_configured_providers(config: RouterConfig) -> dict[str, object]:
+    """Instantiate configured providers from env-backed credentials.
+
+    Missing credentials or missing local endpoints simply leave the route unregistered so the
+    router can record `provider_not_registered` without making a request.
+    """
+
+    providers: dict[str, object] = {}
+    for entry in config.route:
+        if entry.provider is ProviderKind.GROQ:
+            api_key = os.environ.get("GROQ_API_KEY")
+            if not api_key:
+                continue
+            from groq import Groq
+
+            providers[entry.id] = GroqProvider(client=Groq(api_key=api_key))
+        elif entry.provider is ProviderKind.HUGGINGFACE:
+            token = os.environ.get("HF_TOKEN")
+            if entry.locality is ProviderLocality.REMOTE and not token:
+                continue
+            from huggingface_hub import InferenceClient
+
+            providers[entry.id] = HuggingFaceProvider(
+                client=InferenceClient(model=entry.model, token=token, base_url=entry.base_url)
+            )
+        elif entry.provider is ProviderKind.OPENAI_COMPATIBLE:
+            api_key = os.environ.get("OPENAI_COMPATIBLE_API_KEY")
+            if entry.locality is ProviderLocality.REMOTE and not api_key:
+                continue
+            if entry.base_url is None:
+                continue
+            from openai import OpenAI
+
+            providers[entry.id] = OpenAICompatibleProvider(
+                client=OpenAI(
+                    api_key=api_key or "not-needed-for-local-endpoint",
+                    base_url=entry.base_url,
+                )
+            )
+    return providers
 
 
 def classify_provider_error(error: Exception) -> ProviderFailure:

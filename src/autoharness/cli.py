@@ -169,7 +169,7 @@ def scan(
             path,
             max_file_bytes=max_file_bytes,
             online=online,
-            web_evidence_enabled=config.web_evidence.enabled,
+            web_evidence_config=config.web_evidence,
         )
         artifact_path = output if output.is_absolute() else Path.cwd() / output
         write_report(artifact_path, report)

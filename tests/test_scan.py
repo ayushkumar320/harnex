@@ -7,6 +7,12 @@ import pytest
 from typer.testing import CliRunner
 
 from autoharness.cli import app
+from autoharness.external_evidence import (
+    FakeExternalEvidenceProvider,
+    FileExternalEvidenceCache,
+    WebEvidenceConfig,
+    external_evidence,
+)
 from autoharness.reporter import canonical_json
 from autoharness.scan import scan_repository
 
@@ -239,3 +245,43 @@ def test_cli_online_json_reports_evidence_bundle(tmp_path: Path) -> None:
     payload = json.loads(result.output)
     assert payload["evidence_bundle"]["incomplete_reason"] == "web_evidence_disabled"
     assert payload["evidence_bundle"]["local_evidence"][0]["path"] == "README.md"
+
+
+def test_online_scan_uses_external_provider_and_cache(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    write(repo / "README.md", "# Agent\n\nUses OpenAI docs.\n")
+    write(repo / "agent.py", "def run():\n    return None\n")
+    evidence = external_evidence(
+        url="https://platform.openai.com/docs",
+        title="OpenAI Docs",
+        text="Official OpenAI API docs.",
+        query="openai official documentation agent reliability",
+        allowed_domains=["platform.openai.com"],
+    )
+    provider = FakeExternalEvidenceProvider([evidence])
+    cache = FileExternalEvidenceCache(tmp_path / "cache")
+    config = WebEvidenceConfig(enabled=True, max_credits_per_command=1)
+
+    first = scan_repository(
+        repo,
+        online=True,
+        web_evidence_config=config,
+        external_provider=provider,
+        external_cache=cache,
+    )
+    second = scan_repository(
+        repo,
+        online=True,
+        web_evidence_config=config,
+        external_provider=provider,
+        external_cache=cache,
+    )
+
+    assert first.evidence_bundle is not None
+    assert first.evidence_bundle.incomplete_reason is None
+    assert [item.domain for item in first.evidence_bundle.external_evidence] == [
+        "platform.openai.com"
+    ]
+    assert provider.calls == 1
+    assert second.evidence_bundle is not None
+    assert second.evidence_bundle.external_evidence == first.evidence_bundle.external_evidence

@@ -199,3 +199,26 @@ The LLM may produce schema-valid candidate findings in contract tests, but Phase
   output carries the evidence bundle, and default golden JSON remains stable.
 - Acceptance commands run successfully for the slice: `uv run ruff check .`,
   `uv run ruff format --check .`, `uv run mypy src`, and `uv run pytest` (50 tests).
+
+### 2026-07-15 Phase 2 Completion
+
+- Completed config/env wiring for Groq, Hugging Face, OpenAI-compatible, and Tavily adapters.
+  Missing remote credentials leave routes unregistered for router/doctor diagnostics rather than
+  causing default scans to fail.
+- Added route validation for duplicate IDs, positive deadlines/attempt limits, enabled-policy
+  consistency, and declared locality matching configured endpoint URLs.
+- Added persisted, redaction-safe provider circuit state containing only route ID, normalized
+  failure kind, consecutive transient failure count, and cooldown timestamp.
+- Integrated external evidence collection into `harness scan --online` using public package-name
+  query planning, official-domain mappings, hard credit budgets, and the file-backed
+  external-evidence cache. Web evidence remains disabled by default and reports
+  `web_evidence_disabled`, `web_evidence_unavailable`, `no_public_web_queries`,
+  `budget_exhausted`, or `external_evidence_empty` instead of implying current-web validation.
+- Expanded diagnostics in `harness doctor` for configured but unprobed routes, web-evidence
+  credential readiness, official-domain mode, and deterministic structural fallback.
+- Added tests for legacy env-to-route wiring, duplicate route rejection, missing-credential
+  provider factory behavior, persisted circuit redaction, and `scan --online` cache reuse.
+- Final Phase 2 acceptance commands run successfully: `uv run ruff check .`,
+  `uv run ruff format --check .`, `uv run mypy src`, and `uv run pytest` (55 tests).
+- Live provider and Tavily calls remain opt-in and were not required or executed by the default
+  suite. Phase 3 owns deterministic acceptance of model-generated findings and plans.
