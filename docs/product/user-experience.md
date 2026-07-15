@@ -150,11 +150,12 @@ Initial contract:
 | `0` | Command completed and policy threshold passed |
 | `1` | Findings exceeded the configured CI threshold |
 | `2` | Invalid command or configuration |
-| `3` | Repository could not be analyzed |
+| `3` | Repository could not be analyzed, or a scan completed only partially |
 | `4` | Plan is stale or requires unresolved approval |
 | `5` | Verification or sandbox capability failed |
 
-Exact codes become versioned public API after Phase 1.
+Phase 1 makes the scan subset of these codes concrete: invalid paths, empty scans, and partial
+parse coverage exit with `3` after rendering any available report.
 
 ## Performance Expectations
 

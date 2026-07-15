@@ -58,6 +58,17 @@ uv run pytest
 
 Phase documents add targeted commands and acceptance checks.
 
+## Local Scan Smoke
+
+```bash
+uv run harness scan tests/fixtures/repositories/basic_agent --output /tmp/autoharness-basic.json
+uv run harness scan tests/fixtures/repositories/edge_cases --output /tmp/autoharness-edge.json
+uv run harness scan tests/fixtures/repositories/unsupported_text --output /tmp/autoharness-unsupported.json
+```
+
+The scan command is read-only with respect to target code execution: it inventories files and parses
+Python source as data. It writes only the requested report artifact.
+
 ## Docker Application Image
 
 The root Dockerfile packages the AutoHarness CLI itself:

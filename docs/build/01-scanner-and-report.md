@@ -99,4 +99,33 @@ Run all Phase 0 and Phase 1 acceptance gates. Update architecture and user docs 
 
 ## Phase Completion Record
 
-Not started.
+### 2026-07-15
+
+- Delivered `harness scan <path>` as a deterministic, read-only structural scanner for Python
+  repositories. The scanner inventories repository files, applies `.gitignore` and
+  `.autoharnessignore`, excludes secret paths/content, binary files, oversized files, generated
+  cache directories, and symlinks, and never imports or executes target code.
+- Added versioned Phase 1 scan schemas: `RepositoryInventory`, `StructuralFact`, `ParseFailure`,
+  `ScanSummary`, and `AuditReport`.
+- Added AST detectors for functions, imports, call sites, CLI candidates, direct model-call
+  candidates, shell/process side effects, filesystem-write side effects, broad exception handlers,
+  and unknown dynamic lookup/import patterns.
+- Added canonical byte-stable JSON report writing through `--output`, JSON terminal output through
+  `--format json`, and a concise human summary from the same report model.
+- Added persistent fixture repositories for a basic Python agent, edge-case exclusions/side effects,
+  and an unsupported text-only repository, plus tests for no target execution, symlink escape
+  exclusion, secret exclusion, deterministic JSON, human/JSON count consistency, parse failures,
+  invalid paths, basic performance, and a normalized golden JSON report.
+- Acceptance commands run successfully: `uv sync --all-extras --locked`,
+  `uv run harness --help`, `uv run harness --version`, `uv run ruff check .`,
+  `uv run ruff format --check .`, `uv run mypy src`, `uv run pytest` (25 tests),
+  `docker build -t autoharness:phase-0 .`, and
+  `docker run --rm autoharness:phase-0 --version`.
+- Phase 1 scan smoke commands run successfully on:
+  `tests/fixtures/repositories/basic_agent`,
+  `tests/fixtures/repositories/edge_cases`, and
+  `tests/fixtures/repositories/unsupported_text`.
+- Repeated scans of the same fixture produced byte-identical canonical JSON artifacts.
+- Known limitations deferred to later phases: no model-assisted interpretation, no retrieval or
+  external evidence, no normalized reliability findings, no remediation planning, no generation,
+  no target execution, and no sandbox enforcement.

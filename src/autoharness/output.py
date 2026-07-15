@@ -28,4 +28,4 @@ def make_console(*, color: ColorMode, quiet: bool = False, stderr: bool = False)
 
 
 def print_json(console: Console, payload: dict[str, Any]) -> None:
-    console.print(json.dumps(payload, sort_keys=True, separators=(",", ":")))
+    console.file.write(json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n")

@@ -101,6 +101,16 @@ uv sync --all-extras --locked
 uv run harness --help
 ```
 
+Run the first read-only scanner:
+
+```bash
+uv run harness scan . --output .autoharness/scan.json
+uv run harness scan . --format json --output .autoharness/scan.json
+```
+
+`scan` parses Python files as data. It does not import target modules, run setup hooks, execute
+tests, or call model providers.
+
 Copy `.env.example` to `.env` only when testing model-assisted behavior. A read-only scan must not require provider credentials.
 
 ## Docker

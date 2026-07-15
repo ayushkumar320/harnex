@@ -1,4 +1,5 @@
 .env
+!tests/fixtures/repositories/**/.env
 .venv/
 __pycache__/
 *.py[cod]

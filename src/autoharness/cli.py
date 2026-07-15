@@ -9,6 +9,8 @@ from autoharness.config import ConfigOverrides, load_config
 from autoharness.errors import AutoHarnessError, render_error
 from autoharness.logging import configure_logging
 from autoharness.output import ColorMode, OutputFormat, make_console, print_json
+from autoharness.reporter import canonical_json, render_human_summary, write_report
+from autoharness.scan import scan_repository
 
 app = typer.Typer(
     name="harness",
@@ -107,3 +109,63 @@ def _render_cli_error(
         print_json(console, error.to_dict(verbose=verbose))
     else:
         render_error(console, error, verbose=verbose)
+
+
+@app.command()
+def scan(
+    path: Annotated[
+        Path,
+        typer.Argument(help="Repository directory to scan without importing or executing it."),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option("--output", "-o", help="Path for the canonical JSON scan report."),
+    ] = Path(".autoharness/scan.json"),
+    max_file_bytes: Annotated[
+        int,
+        typer.Option("--max-file-bytes", help="Maximum file size to read during inventory."),
+    ] = 1_000_000,
+    output_format: Annotated[
+        str | None,
+        typer.Option("--format", help="Output format for this command: human or json."),
+    ] = None,
+    config_path: Annotated[
+        Path | None,
+        typer.Option("--config", help="Path to an AutoHarness YAML configuration file."),
+    ] = None,
+    color: Annotated[
+        str | None,
+        typer.Option("--color", help="Color mode: auto, always, or never."),
+    ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="Show diagnostic context without raw secrets."),
+    ] = False,
+    quiet: Annotated[
+        bool,
+        typer.Option("--quiet", "-q", help="Suppress non-essential human output."),
+    ] = False,
+) -> None:
+    """Read-only structural scan of a Python agent repository."""
+    try:
+        config = load_config(
+            ConfigOverrides(
+                output_format=output_format,
+                config_path=config_path,
+                color=color,
+            )
+        )
+        configure_logging(config.log_level)
+        console = make_console(color=ColorMode(config.color), quiet=quiet)
+        report = scan_repository(path, max_file_bytes=max_file_bytes)
+        artifact_path = output if output.is_absolute() else Path.cwd() / output
+        write_report(artifact_path, report)
+        if OutputFormat(config.output_format) is OutputFormat.JSON:
+            console.file.write(canonical_json(report) + "\n")
+        else:
+            render_human_summary(console, report, artifact_path=artifact_path)
+        if report.summary.status in {"partial", "empty"}:
+            raise typer.Exit(3)
+    except AutoHarnessError as exc:
+        _render_cli_error(exc, output_format=output_format, color=color, verbose=verbose)
+        raise typer.Exit(exc.exit_code) from exc
