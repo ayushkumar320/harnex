@@ -63,7 +63,10 @@ if __name__ == "__main__":
     assert report.summary.model_call_candidates == 1
     assert report.summary.side_effect_candidates == 3
     assert report.summary.unknown_dynamic_patterns == 1
+    assert report.summary.findings_total == 6
+    assert report.summary.findings_by_severity["high"] == 4
     assert "broad_exception_handler" in kinds
+    assert {finding.rule_id for finding in report.findings} >= {"AH-R101", "AH-S101", "AH-U101"}
 
 
 def test_scan_never_imports_or_executes_target_files(tmp_path: Path) -> None:
@@ -149,6 +152,7 @@ def test_cli_human_and_json_share_counts(tmp_path: Path) -> None:
     artifact = json.loads(output.read_text(encoding="utf-8"))
     assert "AutoHarness scan is read-only" in human.output
     assert "Included files" in human.output
+    assert "Findings" in human.output
     assert payload["summary"] == artifact["summary"]
     assert str(payload["summary"]["included_files"]) in human.output
 
@@ -197,6 +201,7 @@ def test_persistent_fixture_repositories_match_labels() -> None:
     edge_exclusions = {item.path: item.reason for item in edge.repository.excluded_paths}
 
     assert basic.summary.model_call_candidates == 1
+    assert basic.summary.findings_total >= 1
     assert basic.summary.cli_candidates == 1
     assert edge.summary.side_effect_candidates == 2
     assert edge.summary.unknown_dynamic_patterns == 1
@@ -245,6 +250,57 @@ def test_cli_online_json_reports_evidence_bundle(tmp_path: Path) -> None:
     payload = json.loads(result.output)
     assert payload["evidence_bundle"]["incomplete_reason"] == "web_evidence_disabled"
     assert payload["evidence_bundle"]["local_evidence"][0]["path"] == "README.md"
+
+
+def test_scan_suppression_is_visible_but_not_counted_active(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    write(
+        repo / ".autoharness" / "suppressions.yml",
+        """
+suppressions:
+  - rule_id: AH-S101
+    path: agent.py
+    reason: fixture side effect is intentionally reviewed
+""",
+    )
+    write(
+        repo / "agent.py",
+        """
+import subprocess
+
+def run():
+    subprocess.run(["echo", "hi"])
+""",
+    )
+
+    report = scan_repository(repo)
+
+    assert report.summary.findings_total == 0
+    assert report.summary.suppressed_findings == 1
+    assert report.findings[0].suppressed is True
+    assert report.findings[0].suppression_reason == "fixture side effect is intentionally reviewed"
+
+
+def test_cli_scan_fail_on_threshold_uses_active_findings(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    output = tmp_path / "scan.json"
+    write(
+        repo / "agent.py",
+        """
+import subprocess
+
+def run():
+    subprocess.run(["echo", "hi"])
+""",
+    )
+
+    result = runner.invoke(
+        app,
+        ["scan", str(repo), "--fail-on", "high", "--output", str(output)],
+    )
+
+    assert result.exit_code == 1
+    assert output.exists()
 
 
 def test_online_scan_uses_external_provider_and_cache(tmp_path: Path) -> None:

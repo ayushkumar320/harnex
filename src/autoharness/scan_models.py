@@ -6,6 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from autoharness.findings import Finding
 from autoharness.retrieval_models import EvidenceBundle
 
 
@@ -80,6 +81,9 @@ class ScanSummary(BaseModel):
     model_call_candidates: int
     side_effect_candidates: int
     unknown_dynamic_patterns: int
+    findings_total: int = 0
+    findings_by_severity: dict[str, int] = Field(default_factory=dict)
+    suppressed_findings: int = 0
 
 
 class AuditReport(BaseModel):
@@ -90,6 +94,7 @@ class AuditReport(BaseModel):
     repository: RepositoryInventory
     facts: list[StructuralFact]
     parse_failures: list[ParseFailure]
+    findings: list[Finding] = Field(default_factory=list)
     evidence_bundle: EvidenceBundle | None = None
     summary: ScanSummary
     next_action: str

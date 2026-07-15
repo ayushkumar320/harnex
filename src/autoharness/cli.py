@@ -10,6 +10,13 @@ from autoharness.doctor import doctor_report
 from autoharness.errors import AutoHarnessError, render_error
 from autoharness.logging import configure_logging
 from autoharness.output import ColorMode, OutputFormat, make_console, print_json
+from autoharness.planning import (
+    build_plan,
+    canonical_plan_json,
+    load_scan_report,
+    render_plan_summary,
+    write_plan,
+)
 from autoharness.reporter import canonical_json, render_human_summary, write_report
 from autoharness.scan import scan_repository
 
@@ -133,6 +140,13 @@ def scan(
             help="Build an evidence bundle for online enrichment; web calls require config.",
         ),
     ] = False,
+    fail_on: Annotated[
+        str | None,
+        typer.Option(
+            "--fail-on",
+            help="Exit 1 when active findings at this severity or higher are present.",
+        ),
+    ] = None,
     output_format: Annotated[
         str | None,
         typer.Option("--format", help="Output format for this command: human or json."),
@@ -179,6 +193,66 @@ def scan(
             render_human_summary(console, report, artifact_path=artifact_path)
         if report.summary.status in {"partial", "empty"}:
             raise typer.Exit(3)
+        if fail_on is not None and _threshold_exceeded(
+            report.summary.findings_by_severity, fail_on
+        ):
+            raise typer.Exit(1)
+    except AutoHarnessError as exc:
+        _render_cli_error(exc, output_format=output_format, color=color, verbose=verbose)
+        raise typer.Exit(exc.exit_code) from exc
+
+
+@app.command()
+def plan(
+    scan_artifact: Annotated[
+        Path,
+        typer.Argument(help="Completed AutoHarness scan JSON artifact to plan from."),
+    ] = Path(".autoharness/scan.json"),
+    output: Annotated[
+        Path,
+        typer.Option("--output", "-o", help="Path for the canonical JSON plan artifact."),
+    ] = Path(".autoharness/plan.json"),
+    output_format: Annotated[
+        str | None,
+        typer.Option("--format", help="Output format for this command: human or json."),
+    ] = None,
+    config_path: Annotated[
+        Path | None,
+        typer.Option("--config", help="Path to an AutoHarness YAML configuration file."),
+    ] = None,
+    color: Annotated[
+        str | None,
+        typer.Option("--color", help="Color mode: auto, always, or never."),
+    ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="Show diagnostic context without raw secrets."),
+    ] = False,
+    quiet: Annotated[
+        bool,
+        typer.Option("--quiet", "-q", help="Suppress non-essential human output."),
+    ] = False,
+) -> None:
+    """Create a read-only review plan from a completed scan artifact."""
+    try:
+        config = load_config(
+            ConfigOverrides(
+                output_format=output_format,
+                config_path=config_path,
+                color=color,
+            )
+        )
+        console = make_console(color=ColorMode(config.color), quiet=quiet)
+        report, scan_hash = load_scan_report(scan_artifact)
+        plan_artifact = build_plan(report, scan_hash=scan_hash, scan_path=scan_artifact)
+        artifact_path = output if output.is_absolute() else Path.cwd() / output
+        write_plan(artifact_path, plan_artifact)
+        if OutputFormat(config.output_format) is OutputFormat.JSON:
+            console.file.write(canonical_plan_json(plan_artifact) + "\n")
+        else:
+            render_plan_summary(console, plan_artifact, artifact_path=artifact_path)
+        if plan_artifact.status == "blocked":
+            raise typer.Exit(4)
     except AutoHarnessError as exc:
         _render_cli_error(exc, output_format=output_format, color=color, verbose=verbose)
         raise typer.Exit(exc.exit_code) from exc
@@ -242,3 +316,12 @@ def doctor(
     except AutoHarnessError as exc:
         _render_cli_error(exc, output_format=output_format, color=color, verbose=verbose)
         raise typer.Exit(exc.exit_code) from exc
+
+
+def _threshold_exceeded(counts: dict[str, int], threshold: str) -> bool:
+    order = ["low", "medium", "high", "critical"]
+    normalized = threshold.lower()
+    if normalized not in order:
+        return False
+    minimum = order.index(normalized)
+    return any(counts.get(severity, 0) > 0 for severity in order[minimum:])

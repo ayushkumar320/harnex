@@ -9,6 +9,12 @@ from typing import Literal
 from rich.console import Console
 from rich.table import Table
 
+from autoharness.findings import (
+    derive_findings,
+    finding_counts,
+    load_suppressions,
+    unsuppressed_findings,
+)
 from autoharness.scan_models import (
     AuditReport,
     ParseFailure,
@@ -25,6 +31,7 @@ def build_report(
     parse_failures: int,
 ) -> AuditReport:
     counts = _count_facts(facts)
+    root = Path(inventory.root)
     python_files = inventory.language_counts.get("python", 0)
     status: Literal["complete", "partial", "empty", "unsupported"]
     if not inventory.included_files:
@@ -49,12 +56,26 @@ def build_report(
         side_effect_candidates=counts["side_effect_candidate"],
         unknown_dynamic_patterns=counts["unknown_dynamic_pattern"],
     )
+    findings = derive_findings(
+        facts,
+        inventory.excluded_paths,
+        suppressions=load_suppressions(root),
+    )
+    active_findings = unsuppressed_findings(findings)
+    summary = summary.model_copy(
+        update={
+            "findings_total": len(active_findings),
+            "findings_by_severity": finding_counts(active_findings),
+            "suppressed_findings": len(findings) - len(active_findings),
+        }
+    )
     return AuditReport(
         repository=inventory,
         facts=facts,
         parse_failures=[],
+        findings=findings,
         summary=summary,
-        next_action="Review the JSON report, then run Phase 2 work when provider routing is ready.",
+        next_action="Review findings, then run harness plan on the JSON report.",
     )
 
 
@@ -90,6 +111,11 @@ def render_human_summary(console: Console, report: AuditReport, *, artifact_path
     table.add_row("Model call candidates", str(summary.model_call_candidates))
     table.add_row("Side-effect candidates", str(summary.side_effect_candidates))
     table.add_row("Unknown dynamic patterns", str(summary.unknown_dynamic_patterns))
+    table.add_row("Findings", str(summary.findings_total))
+    table.add_row("Suppressed findings", str(summary.suppressed_findings))
+    for severity, count in summary.findings_by_severity.items():
+        if count:
+            table.add_row(f"Findings {severity}", str(count))
     if report.evidence_bundle is not None:
         table.add_row("Local evidence chunks", str(len(report.evidence_bundle.local_evidence)))
         table.add_row(
@@ -97,6 +123,17 @@ def render_human_summary(console: Console, report: AuditReport, *, artifact_path
             str(len(report.evidence_bundle.external_evidence)),
         )
     console.print(table)
+    if report.findings:
+        console.print("Highest-impact findings:")
+        for finding in report.findings[:5]:
+            evidence = finding.evidence[0]
+            location = evidence.path
+            if evidence.line is not None:
+                location = f"{location}:{evidence.line}"
+            console.print(
+                f"- {finding.rule_id} {finding.title} "
+                f"({finding.severity.value}, {finding.support.value}) at {location}"
+            )
     console.print(f"Detailed JSON: {artifact_path}")
     console.print(f"Next: {report.next_action}")
 

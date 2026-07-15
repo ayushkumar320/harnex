@@ -1,19 +1,23 @@
 # Current Phase
 
-[Phase 2: Providers and evidence](02-provider-and-retrieval.md) is complete.
+We are building [Phase 3: Findings and planning UX](03-findings-and-planning.md).
 
-Verified Phase 2 capabilities:
+Current status: Phase 3 is in progress, not complete.
 
-- Local documentation/docstring retrieval with secret and path filtering.
-- Provider/router contracts, fake providers, and `harness doctor` diagnostics.
-- Groq, Hugging Face, OpenAI-compatible, and Tavily adapter wiring from config/env.
-- Router provenance, optional JSON capability reduction, citation validation, and persisted
-  redaction-safe circuit state.
-- `harness scan --online` evidence bundles with local evidence, approved official-domain web
-  query planning, Tavily cache integration, and no web calls unless explicitly enabled.
-- Default scan remains structural, read-only, and offline.
+Completed slices:
 
-Next planned phase: [Phase 3: Findings and planning](03-findings-and-planning.md). Phase 3 has
-not started.
+- Initial deterministic finding catalog with evidence-cited findings.
+- Scan artifact and human summary include active finding counts, severity counts, and visible
+  suppressions.
+- `harness scan --fail-on` supports CI severity thresholds with exit code `1`.
+- Read-only `harness plan` consumes completed scan artifacts and emits a versioned
+  `HarnessPlan`.
+
+Remaining before Phase 3 completion:
+
+- LLM candidate-finding synthesis path through the Phase 2 router.
+- Deterministic acceptance validators for LLM-proposed findings and plan text.
+- Broader stale/incompatible artifact checks and documented CI examples.
+- Final fixture precision measurement, docs, Docker gates, and completion record.
 
 This pointer is intentionally simple. Update it when work moves to the next phase.

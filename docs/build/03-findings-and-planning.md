@@ -99,4 +99,28 @@ Do not begin generation. Run all gates, update public docs with the real finding
 
 ## Phase Completion Record
 
-Not started.
+### 2026-07-15 Initial Deterministic Findings and Plan Slice
+
+- Added the initial public finding catalog in `docs/architecture/finding-catalog.md`.
+- Added deterministic findings for uninstrumented model calls, broad exception handlers,
+  uncontained shell/filesystem side effects, secret-like exclusions, and unresolved dynamic
+  lookup.
+- Extended scan artifacts with active finding counts, severity counts, detailed finding records,
+  and visible suppression metadata. Suppressed findings remain in JSON and human summaries show
+  the suppressed count.
+- Added `.autoharness/suppressions.yml` support with explicit rule, optional path, reason, and
+  expiry metadata.
+- Added `harness scan --fail-on` for CI severity thresholds and exit code `1` when active
+  findings meet the threshold.
+- Added read-only `harness plan` producing a versioned `HarnessPlan` from completed scan
+  artifacts. Plans reject partial scans and never write target files.
+- Manual usability pass: `harness scan tests/fixtures/repositories/basic_agent` and
+  `harness plan /tmp/autoharness-basic-scan.json` clearly identified read-only behavior,
+  finding counts, one high-impact finding, and one review-only unresolved plan action.
+- Acceptance commands for this slice passed: `uv run ruff check .`,
+  `uv run ruff format --check .`, `uv run mypy src`, and `uv run pytest` (60 tests).
+
+Still in progress: LLM candidate synthesis through the configured router, deterministic
+acceptance of model-proposed finding text and plan text, broader stale artifact checks,
+CI examples, final fixture precision measurement, Docker gates, and the Phase 3 completion
+record.
