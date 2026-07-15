@@ -104,4 +104,21 @@ Do not mark the phase complete until the acceptance gates pass. Finish by updati
 
 ## Phase Completion Record
 
-Not started.
+### 2026-07-15
+
+- Delivered a typed Phase 0 CLI foundation with global options for version, output format,
+  config path, color mode, verbosity, and quiet output. Product commands remain intentionally
+  absent until their build phases.
+- Added configuration loading with precedence `flags -> environment -> config file -> defaults`,
+  user-facing configuration errors, base schema models, and redacted structured logging setup.
+- Added tests for CLI bootstrap behavior, configuration precedence and invalid values,
+  `NO_COLOR`, JSON error rendering, logging redaction, and dependency synchronization.
+- Added coverage configuration and a CI workflow for UV, Ruff, mypy, pytest, and application
+  container smoke checks.
+- Acceptance commands run successfully: `uv sync --all-extras --locked`,
+  `uv run harness --help`, `uv run harness --version`, `NO_COLOR=1 uv run harness --format xml`,
+  `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy src`, and `uv run pytest`.
+- Container acceptance commands now pass: `docker build -t autoharness:phase-0 .` and
+  `docker run --rm autoharness:phase-0 --version`.
+- Deferred to later phases: repository scanning, provider routing, external evidence retrieval,
+  generation, target-code execution, and sandbox enforcement.

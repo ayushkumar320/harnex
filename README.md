@@ -97,9 +97,7 @@ Free tiers, quotas, and available models change. AutoHarness therefore discovers
 Install [uv](https://docs.astral.sh/uv/) and run:
 
 ```bash
-uv venv
-uv pip install -r requirements-dev.txt
-uv pip install --no-deps --no-build-isolation -e .
+uv sync --all-extras --locked
 uv run harness --help
 ```
 
@@ -110,8 +108,8 @@ Copy `.env.example` to `.env` only when testing model-assisted behavior. A read-
 Build and inspect the CLI bootstrap:
 
 ```bash
-docker build -t autoharness:dev .
-docker run --rm autoharness:dev --help
+docker build -t autoharness:phase-0 .
+docker run --rm autoharness:phase-0 --version
 ```
 
 Or use Compose:

@@ -12,20 +12,12 @@ Provider credentials are optional for structural scanning and default tests. Ful
 ## Local Environment
 
 ```bash
-uv venv
-uv pip install -r requirements-dev.txt
-uv pip install --no-deps --no-build-isolation -e .
+uv sync --all-extras --locked
 uv run harness --help
 ```
 
 The canonical dependency declaration is `pyproject.toml`. `requirements.txt` and `requirements-dev.txt` exist for explicit UV pip workflows and container layer caching. Keep them synchronized until Phase 0 establishes automated export and lock checks.
-
-After dependency resolution is available, create and commit `uv.lock`:
-
-```bash
-uv lock
-uv sync --all-extras
-```
+The test suite checks that both requirements files match `pyproject.toml`.
 
 ## Environment Configuration
 

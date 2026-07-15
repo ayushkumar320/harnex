@@ -42,6 +42,7 @@ dev = [
   "pytest-cov>=6,<8",
   "respx>=0.22,<1",
   "ruff>=0.11,<1",
+  "types-PyYAML>=6.0,<7",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -50,6 +51,14 @@ packages = ["src/autoharness"]
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers"
 testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["autoharness"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
 
 [tool.ruff]
 target-version = "py312"
