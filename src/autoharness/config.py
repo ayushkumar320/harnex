@@ -9,10 +9,12 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from autoharness.errors import ConfigurationError, ErrorContext
+from autoharness.external_evidence import WebEvidenceConfig
 from autoharness.output import ColorMode, OutputFormat
+from autoharness.providers import RouterConfig
 
 
 class LogLevel(StrEnum):
@@ -46,6 +48,8 @@ class AppConfig(BaseModel):
     log_level: LogLevel = LogLevel.INFO
     telemetry_enabled: bool = False
     model_provider: ModelProvider = ModelProvider.DISABLED
+    model_assistance: RouterConfig = Field(default_factory=RouterConfig)
+    web_evidence: WebEvidenceConfig = Field(default_factory=WebEvidenceConfig)
     config_path: Path | None = None
 
     @field_validator("log_level", mode="before")
@@ -84,6 +88,8 @@ DEFAULTS: dict[str, ConfigValue] = {
     "log_level": ConfigValue(value=LogLevel.INFO, source=Source.DEFAULT),
     "telemetry_enabled": ConfigValue(value=False, source=Source.DEFAULT),
     "model_provider": ConfigValue(value=ModelProvider.DISABLED, source=Source.DEFAULT),
+    "model_assistance": ConfigValue(value=RouterConfig(), source=Source.DEFAULT),
+    "web_evidence": ConfigValue(value=WebEvidenceConfig(), source=Source.DEFAULT),
     "config_path": ConfigValue(value=None, source=Source.DEFAULT),
 }
 
@@ -106,6 +112,18 @@ def load_config(overrides: ConfigOverrides | None = None) -> AppConfig:
                 value=_coerce_env_value(field, raw_value),
                 source=Source.ENVIRONMENT,
             )
+
+    if "AUTOHARNESS_WEB_EVIDENCE_ENABLED" in os.environ:
+        web = _mapping_value(values["web_evidence"].value)
+        web["enabled"] = _coerce_env_value(
+            "web_evidence.enabled",
+            os.environ["AUTOHARNESS_WEB_EVIDENCE_ENABLED"],
+        )
+        values["web_evidence"] = ConfigValue(value=web, source=Source.ENVIRONMENT)
+    if "AUTOHARNESS_TAVILY_MAX_CREDITS" in os.environ:
+        web = _mapping_value(values["web_evidence"].value)
+        web["max_credits_per_command"] = int(os.environ["AUTOHARNESS_TAVILY_MAX_CREDITS"])
+        values["web_evidence"] = ConfigValue(value=web, source=Source.ENVIRONMENT)
 
     for field, value in overrides.model_dump(exclude_none=True).items():
         values[field] = ConfigValue(value=value, source=Source.FLAG)
@@ -192,13 +210,21 @@ def _load_config_file(path: Path) -> dict[str, Any]:
 
 
 def _coerce_env_value(field: str, value: str) -> Any:
-    if field == "telemetry_enabled":
+    if field in {"telemetry_enabled", "web_evidence.enabled"}:
         lowered = value.lower()
         if lowered in {"1", "true", "yes", "on"}:
             return True
         if lowered in {"0", "false", "no", "off"}:
             return False
     return value
+
+
+def _mapping_value(value: Any) -> dict[str, Any]:
+    if isinstance(value, BaseModel):
+        return value.model_dump()
+    if isinstance(value, Mapping):
+        return dict(value)
+    return {}
 
 
 def _expected_for(field: str) -> str:

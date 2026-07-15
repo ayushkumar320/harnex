@@ -69,6 +69,17 @@ uv run harness scan tests/fixtures/repositories/unsupported_text --output /tmp/a
 The scan command is read-only with respect to target code execution: it inventories files and parses
 Python source as data. It writes only the requested report artifact.
 
+## Provider Diagnostics
+
+```bash
+uv run harness doctor
+uv run harness doctor --format json
+```
+
+`doctor` is repository-free. It reports configured model-assistance routes, missing credentials,
+web-evidence settings, and the deterministic structural-inventory fallback without contacting
+providers or sending repository evidence.
+
 ## Docker Application Image
 
 The root Dockerfile packages the AutoHarness CLI itself:

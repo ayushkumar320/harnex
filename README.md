@@ -111,6 +111,12 @@ uv run harness scan . --format json --output .autoharness/scan.json
 `scan` parses Python files as data. It does not import target modules, run setup hooks, execute
 tests, or call model providers.
 
+Inspect provider and web-evidence configuration without sending repository evidence:
+
+```bash
+uv run harness doctor
+```
+
 Copy `.env.example` to `.env` only when testing model-assisted behavior. A read-only scan must not require provider credentials.
 
 ## Docker

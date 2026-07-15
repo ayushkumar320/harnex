@@ -6,6 +6,7 @@ from pydantic import ValidationError
 
 from autoharness import __version__
 from autoharness.config import ConfigOverrides, load_config
+from autoharness.doctor import doctor_report
 from autoharness.errors import AutoHarnessError, render_error
 from autoharness.logging import configure_logging
 from autoharness.output import ColorMode, OutputFormat, make_console, print_json
@@ -166,6 +167,66 @@ def scan(
             render_human_summary(console, report, artifact_path=artifact_path)
         if report.summary.status in {"partial", "empty"}:
             raise typer.Exit(3)
+    except AutoHarnessError as exc:
+        _render_cli_error(exc, output_format=output_format, color=color, verbose=verbose)
+        raise typer.Exit(exc.exit_code) from exc
+
+
+@app.command()
+def doctor(
+    output_format: Annotated[
+        str | None,
+        typer.Option("--format", help="Output format for this command: human or json."),
+    ] = None,
+    config_path: Annotated[
+        Path | None,
+        typer.Option("--config", help="Path to an AutoHarness YAML configuration file."),
+    ] = None,
+    color: Annotated[
+        str | None,
+        typer.Option("--color", help="Color mode: auto, always, or never."),
+    ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="Show diagnostic context without raw secrets."),
+    ] = False,
+    quiet: Annotated[
+        bool,
+        typer.Option("--quiet", "-q", help="Suppress non-essential human output."),
+    ] = False,
+) -> None:
+    """Report provider and evidence configuration without sending repository evidence."""
+    try:
+        config = load_config(
+            ConfigOverrides(
+                output_format=output_format,
+                config_path=config_path,
+                color=color,
+            )
+        )
+        console = make_console(color=ColorMode(config.color), quiet=quiet)
+        report = doctor_report(config)
+        if OutputFormat(config.output_format) is OutputFormat.JSON:
+            print_json(console, report)
+        else:
+            console.print("AutoHarness doctor does not send repository evidence.")
+            model = report["model_assistance"]
+            console.print(f"Model assistance: {'enabled' if model['enabled'] else 'disabled'}")
+            console.print(f"Data policy: {model['data_policy']}")
+            if model["route"]:
+                for route in model["route"]:
+                    missing = ", ".join(route["missing"]) if route["missing"] else "none"
+                    console.print(
+                        f"- {route['id']} {route['provider']} {route['model']} "
+                        f"({route['locality']}), missing: {missing}"
+                    )
+            else:
+                console.print("Route: none configured")
+            web = report["web_evidence"]
+            console.print(
+                f"Web evidence: {'enabled' if web['enabled'] else 'disabled'} "
+                f"({web['provider']}), credits: {web['max_credits_per_command']}"
+            )
     except AutoHarnessError as exc:
         _render_cli_error(exc, output_format=output_format, color=color, verbose=verbose)
         raise typer.Exit(exc.exit_code) from exc

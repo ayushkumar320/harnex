@@ -70,3 +70,35 @@ def test_missing_config_file_is_user_facing_error(tmp_path: Path) -> None:
         load_config(ConfigOverrides(config_path=tmp_path / "missing.yaml"))
 
     assert exc_info.value.code == "AH-C002"
+
+
+def test_phase_two_route_config_loads_from_file(tmp_path: Path) -> None:
+    config_file = tmp_path / "autoharness.yaml"
+    config_file.write_text(
+        """
+model_assistance:
+  enabled: true
+  data_policy: local_only
+  route:
+    - id: local
+      provider: openai_compatible
+      model: local-model
+      locality: local
+      base_url: http://127.0.0.1:11434/v1
+  deadlines:
+    attempt_seconds: 1
+    operation_seconds: 2
+web_evidence:
+  enabled: false
+  max_credits_per_command: 1
+""",
+        encoding="utf-8",
+    )
+
+    config = load_config(ConfigOverrides(config_path=config_file))
+
+    assert config.model_assistance.enabled is True
+    assert config.model_assistance.data_policy == "local_only"
+    assert config.model_assistance.route[0].id == "local"
+    assert config.model_assistance.attempt_seconds == 1
+    assert config.web_evidence.max_credits_per_command == 1

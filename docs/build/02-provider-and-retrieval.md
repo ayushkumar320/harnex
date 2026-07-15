@@ -132,6 +132,19 @@ Testing:
 The LLM may produce schema-valid candidate findings in contract tests, but Phase 3 owns deterministic evidence validation and reportable findings. Run all prior and current acceptance gates, update docs and dependency manifests, and append the Phase Completion Record with the exact model, retrieval, and Tavily capabilities actually verified.
 ```
 
-## Phase Completion Record
+## Phase Progress Record
 
-Not started.
+### 2026-07-15
+
+- Started Phase 2 with the local-first foundation: deterministic local documentation/docstring
+  retrieval, evidence schemas, evidence manifests, provider/router contracts, fake model providers,
+  external-evidence privacy and budget scaffolding, fake external evidence provider, and
+  repository-free `harness doctor` diagnostics.
+- Verified that assistance remains disabled by default and that the router returns
+  `incomplete_model_unavailable` without attempts when disabled.
+- Added tests for retrieval determinism and secret filtering, Groq-timeout to Hugging Face
+  failover through fakes, local-only zero remote calls, disabled structural-only fallback,
+  external query privacy, official-domain policy, credit budget exhaustion, and doctor diagnostics.
+- Still in progress: real Groq, Hugging Face, OpenAI-compatible, and Tavily adapters; HTTP contract
+  tests; circuit persistence; cache TTL manifests; `--online`; evidence-bundle citation validation;
+  and full Phase 2 acceptance completion.
