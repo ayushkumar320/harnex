@@ -13,6 +13,8 @@ from rich.table import Table
 
 from autoharness.errors import AutoHarnessError, ErrorContext
 from autoharness.findings import GenerationState
+from autoharness.reporter import fingerprint_for_inventory
+from autoharness.repository import build_inventory
 from autoharness.scan_models import AuditReport
 
 
@@ -78,6 +80,8 @@ def build_plan(report: AuditReport, *, scan_hash: str, scan_path: Path) -> Harne
             ),
             exit_code=4,
         )
+    _validate_scan_compatibility(report)
+    _validate_scan_freshness(report)
 
     actions: list[PlanAction] = []
     blocked_findings: list[str] = []
@@ -159,3 +163,63 @@ def _instrumentation_action(finding_id: str) -> PlanAction:
 
 def _sha256(text: str) -> str:
     return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _validate_scan_compatibility(report: AuditReport) -> None:
+    expected = fingerprint_for_inventory(report.repository).detector_versions
+    if report.fingerprint.detector_versions != expected:
+        raise AutoHarnessError(
+            code="AH-P003",
+            message="Plan input was produced by incompatible detector versions.",
+            context=ErrorContext(
+                field="fingerprint.detector_versions",
+                source="scan artifact",
+                expected="Current AutoHarness detector versions.",
+                next_action="Run harness scan again with this AutoHarness version.",
+            ),
+            exit_code=4,
+            details={
+                "actual": report.fingerprint.detector_versions,
+                "expected": expected,
+            },
+        )
+
+
+def _validate_scan_freshness(report: AuditReport) -> None:
+    current_inventory = build_inventory(
+        Path(report.repository.root),
+        max_file_bytes=report.repository.scan_config.max_file_bytes,
+    )
+    current = fingerprint_for_inventory(current_inventory)
+    if current.scan_config_hash != report.fingerprint.scan_config_hash:
+        raise AutoHarnessError(
+            code="AH-P004",
+            message="Plan input uses a stale or changed scan configuration.",
+            context=ErrorContext(
+                field="fingerprint.scan_config_hash",
+                source="scan artifact",
+                expected="The current repository scan configuration.",
+                next_action="Run harness scan again before planning.",
+            ),
+            exit_code=4,
+            details={
+                "actual": report.fingerprint.scan_config_hash,
+                "expected": current.scan_config_hash,
+            },
+        )
+    if current.inventory_hash != report.fingerprint.inventory_hash:
+        raise AutoHarnessError(
+            code="AH-P005",
+            message="Plan input is stale because the repository snapshot changed.",
+            context=ErrorContext(
+                field="fingerprint.inventory_hash",
+                source="scan artifact",
+                expected="The current repository inventory fingerprint.",
+                next_action="Run harness scan again before planning.",
+            ),
+            exit_code=4,
+            details={
+                "actual": report.fingerprint.inventory_hash,
+                "expected": current.inventory_hash,
+            },
+        )

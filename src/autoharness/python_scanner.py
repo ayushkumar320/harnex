@@ -8,6 +8,8 @@ from pathlib import Path
 
 from autoharness.scan_models import IncludedFile, ParseFailure, StructuralFact
 
+DETECTOR_VERSION = "phase3.python_scanner.v1"
+
 
 def scan_python_files(
     root: Path,

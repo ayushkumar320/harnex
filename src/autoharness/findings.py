@@ -32,6 +32,9 @@ class GenerationState(StrEnum):
     BLOCKED = "blocked"
 
 
+DETECTOR_VERSION = "phase3.findings.v1"
+
+
 class FindingEvidence(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -60,7 +63,7 @@ class Finding(BaseModel):
     evidence: list[FindingEvidence]
     remediation: str
     next_action: str
-    detector_version: str = "phase3.findings.v1"
+    detector_version: str = DETECTOR_VERSION
     suppressed: bool = False
     suppression_reason: str | None = None
     suppression_expires: str | None = None

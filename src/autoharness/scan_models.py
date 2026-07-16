@@ -86,12 +86,21 @@ class ScanSummary(BaseModel):
     suppressed_findings: int = 0
 
 
+class ArtifactFingerprint(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    inventory_hash: str
+    scan_config_hash: str
+    detector_versions: dict[str, str]
+
+
 class AuditReport(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     schema_version: Literal["1.0"] = "1.0"
     artifact_type: Literal["audit_report"] = "audit_report"
     repository: RepositoryInventory
+    fingerprint: ArtifactFingerprint
     facts: list[StructuralFact]
     parse_failures: list[ParseFailure]
     findings: list[Finding] = Field(default_factory=list)

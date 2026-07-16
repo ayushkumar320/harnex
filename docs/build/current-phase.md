@@ -12,12 +12,14 @@ Completed slices:
 - `harness scan --fail-on` supports CI severity thresholds with exit code `1`.
 - Read-only `harness plan` consumes completed scan artifacts and emits a versioned
   `HarnessPlan`.
+- Scan artifacts include deterministic fingerprints and `harness plan` rejects stale repository
+  snapshots or incompatible detector versions.
 
 Remaining before Phase 3 completion:
 
 - LLM candidate-finding synthesis path through the Phase 2 router.
 - Deterministic acceptance validators for LLM-proposed findings and plan text.
-- Broader stale/incompatible artifact checks and documented CI examples.
+- Documented CI examples.
 - Final fixture precision measurement, docs, Docker gates, and completion record.
 
 This pointer is intentionally simple. Update it when work moves to the next phase.

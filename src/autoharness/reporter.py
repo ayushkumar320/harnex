@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Literal
@@ -10,12 +11,17 @@ from rich.console import Console
 from rich.table import Table
 
 from autoharness.findings import (
+    DETECTOR_VERSION as FINDING_DETECTOR_VERSION,
+)
+from autoharness.findings import (
     derive_findings,
     finding_counts,
     load_suppressions,
     unsuppressed_findings,
 )
+from autoharness.python_scanner import DETECTOR_VERSION as PYTHON_SCANNER_VERSION
 from autoharness.scan_models import (
+    ArtifactFingerprint,
     AuditReport,
     ParseFailure,
     RepositoryInventory,
@@ -71,6 +77,7 @@ def build_report(
     )
     return AuditReport(
         repository=inventory,
+        fingerprint=fingerprint_for_inventory(inventory),
         facts=facts,
         parse_failures=[],
         findings=findings,
@@ -91,6 +98,22 @@ def canonical_json(report: AuditReport) -> str:
 def write_report(path: Path, report: AuditReport) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(canonical_json(report) + "\n", encoding="utf-8")
+
+
+def fingerprint_for_inventory(inventory: RepositoryInventory) -> ArtifactFingerprint:
+    inventory_payload = inventory.model_dump(
+        mode="json",
+        include={"included_files", "excluded_paths", "language_counts"},
+    )
+    config_payload = inventory.scan_config.model_dump(mode="json")
+    return ArtifactFingerprint(
+        inventory_hash=_sha256_json(inventory_payload),
+        scan_config_hash=_sha256_json(config_payload),
+        detector_versions={
+            "findings": FINDING_DETECTOR_VERSION,
+            "python_scanner": PYTHON_SCANNER_VERSION,
+        },
+    )
 
 
 def render_human_summary(console: Console, report: AuditReport, *, artifact_path: Path) -> None:
@@ -150,3 +173,8 @@ def _count_facts(facts: list[StructuralFact]) -> dict[str, int]:
         if fact.kind in counts:
             counts[fact.kind] += 1
     return counts
+
+
+def _sha256_json(payload: object) -> str:
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(encoded).hexdigest()

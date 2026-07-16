@@ -58,6 +58,52 @@ def test_plan_rejects_partial_scan_artifact(tmp_path: Path) -> None:
     assert "AH-P002" in result.output
 
 
+def test_plan_rejects_stale_scan_artifact_when_repository_changes(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    scan_path = tmp_path / "scan.json"
+    write(
+        repo / "agent.py",
+        """
+from openai import OpenAI
+
+def run():
+    client = OpenAI()
+    return client.chat.completions.create(model="demo", messages=[])
+""",
+    )
+    write_report(scan_path, scan_repository(repo))
+    write(repo / "new_file.py", "def new_behavior():\n    return 'changed'\n")
+
+    result = runner.invoke(app, ["plan", str(scan_path)])
+
+    assert result.exit_code == 4
+    assert "AH-P005" in result.output
+
+
+def test_plan_rejects_incompatible_detector_versions(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    scan_path = tmp_path / "scan.json"
+    write(
+        repo / "agent.py",
+        """
+from openai import OpenAI
+
+def run():
+    client = OpenAI()
+    return client.chat.completions.create(model="demo", messages=[])
+""",
+    )
+    write_report(scan_path, scan_repository(repo))
+    payload = json.loads(scan_path.read_text(encoding="utf-8"))
+    payload["fingerprint"]["detector_versions"]["python_scanner"] = "old.detector.v0"
+    scan_path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    result = runner.invoke(app, ["plan", str(scan_path)])
+
+    assert result.exit_code == 4
+    assert "AH-P003" in result.output
+
+
 def test_plan_with_only_blocked_findings_exits_four(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     scan_path = tmp_path / "scan.json"
