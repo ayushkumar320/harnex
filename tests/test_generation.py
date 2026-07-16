@@ -1,7 +1,9 @@
 import hashlib
+import importlib
 import json
 import os
 import py_compile
+import sys
 from pathlib import Path
 
 import pytest
@@ -233,6 +235,94 @@ def test_generated_python_artifacts_compile_after_apply(tmp_path: Path) -> None:
     for rel_path in SUPPORTED_OUTPUT_FILES:
         if rel_path.endswith(".py"):
             py_compile.compile(str(repo / rel_path), doraise=True)
+
+
+def test_generated_runtime_wrapper_runs_with_fake_provider(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
+    output_path = tmp_path / "apply-preview.json"
+    apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
+    generated_root = repo / ".autoharness" / "generated"
+    monkeypatch.syspath_prepend(str(generated_root))
+    sys.modules.pop("autoharness_config", None)
+    sys.modules.pop("autoharness_runner", None)
+    runner_module = importlib.import_module("autoharness_runner")
+
+    class FakeClock:
+        def __init__(self) -> None:
+            self.now = 0.0
+            self.sleeps: list[float] = []
+
+        def monotonic(self) -> float:
+            return self.now
+
+        def sleep(self, seconds: float) -> None:
+            self.sleeps.append(seconds)
+            self.now += seconds
+
+    calls = 0
+
+    from autoharness.runtime import RuntimeFailure, RuntimeFailureKind
+
+    def provider_with_runtime_failure(attempt: int) -> dict[str, object]:
+        nonlocal calls
+        calls += 1
+        if attempt == 1:
+            raise RuntimeFailure(
+                RuntimeFailureKind.RATE_LIMITED,
+                "rate limited with sk-secret-token",
+                retry_after_seconds=0.2,
+            )
+        return {"content": "ok", "raw_output": "sk-secret-token"}
+
+    log_path = tmp_path / "runtime.jsonl"
+    clock = FakeClock()
+    result = runner_module.run_direct_provider(
+        provider_with_runtime_failure,
+        log_path=log_path,
+        clock=clock,
+    )
+
+    assert result["status"] == "success"
+    assert result["attempts"] == 2
+    assert calls == 2
+    assert clock.sleeps == [0.2]
+    payload = log_path.read_text(encoding="utf-8")
+    assert "retry_scheduled" in payload
+    assert "sk-secret-token" not in payload
+
+
+def test_generated_runtime_wrapper_returns_correction_packet(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
+    output_path = tmp_path / "apply-preview.json"
+    apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
+    generated_root = repo / ".autoharness" / "generated"
+    monkeypatch.syspath_prepend(str(generated_root))
+    sys.modules.pop("autoharness_config", None)
+    sys.modules.pop("autoharness_runner", None)
+    runner_module = importlib.import_module("autoharness_runner")
+    from autoharness.runtime import RuntimeFailure, RuntimeFailureKind
+
+    def provider(_: int) -> dict[str, object]:
+        raise RuntimeFailure(
+            RuntimeFailureKind.MALFORMED_STRUCTURED_OUTPUT,
+            "bad json with sk-secret-token",
+        )
+
+    result = runner_module.run_direct_provider(
+        provider,
+        user_goal="summarize safely",
+        log_path=tmp_path / "runtime.jsonl",
+    )
+
+    assert result["status"] == "retry_exhausted"
+    assert result["correction_packet"]["failure_kind"] == "malformed_structured_output"
+    assert result["correction_packet"]["safe_message"] == "[redacted]"
 
 
 def test_apply_rejects_unapproved_review_plan(tmp_path: Path) -> None:

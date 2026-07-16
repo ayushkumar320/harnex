@@ -94,6 +94,61 @@ Testing:
 Run all phase gates and update runtime/security docs. Append the completion record with fault-injection evidence and any operation classes still unsupported.
 ```
 
-## Phase Completion Record
+## Phase Progress Record
 
-Not started.
+### 2026-07-16 Initial Runtime Core Slice
+
+- Added `src/autoharness/runtime.py` with versioned `RuntimeEvent` JSONL payloads, normalized
+  runtime statuses and failure kinds, side-effect classifications, attempt ledger entries, and a
+  deterministic retry executor with injected clock and random source.
+- Runtime JSONL writing redacts prompt/raw/header/env/secret-like keys and secret-like values,
+  bounds string fields, preserves valid JSON Lines for hostile terminal-control content, and
+  records logger write failures without raising or printing unredacted fallback output.
+- Retry behavior now has a reusable state machine for read-only and idempotent operations. Unknown
+  and non-idempotent operations are not automatically retried, idempotent operations require a
+  stable key, and a timeout after a fake unknown-side-effect commit terminates as
+  `commit_status_unknown`.
+- Added `tests/test_runtime.py` fault-injection coverage for no retry after unknown fake commit,
+  no retry for non-idempotent operations, `Retry-After` bounded by total elapsed budget, missing
+  idempotency key policy blocking, seeded jitter, JSONL redaction and field bounds, and logger I/O
+  failure.
+- Acceptance commands passed:
+  - `uv run ruff check .`
+  - `uv run ruff format --check .`
+  - `uv run mypy src`
+  - `uv run pytest` (96 tests)
+
+Still in progress: generated direct-provider runtime adapter wiring, human failure summaries,
+malformed-output correction packets before side effects, generated fixture execution with fake
+providers, and the final Phase 5 completion record.
+
+### 2026-07-16 Generated Runtime Adapter Slice
+
+- Added cancellation as a normalized runtime failure that is never retried automatically.
+- Added compact `failure_context` packets for malformed structured output only when the operation
+  is still before an external side effect. Packets preserve the user goal as a bounded redacted
+  summary and avoid raw provider output.
+- Added `HumanFailureSummary` output with terminal status, cause, attempts, elapsed time,
+  side-effect state, evidence artifact path, and a next action.
+- Updated the constrained direct-provider templates to generate:
+  - `.autoharness/generated/autoharness_config.py` with runtime retry policy defaults.
+  - `.autoharness/generated/autoharness_jsonl_logger.py` with redacted JSONL write/read helpers.
+  - `.autoharness/generated/autoharness_runner.py` with a fake-provider-friendly
+    `run_direct_provider` wrapper that logs run/model/retry/finish events, applies bounded
+    read-only retries, returns a human summary, and emits a correction packet for malformed output.
+  - `.autoharness/generated/tests/test_autoharness_smoke.py` with generated fake-provider tests
+    for rate-limit retry and malformed-output correction.
+- Added repository tests that apply the generated files, import the generated runner, execute it
+  against fake providers, assert deterministic retry sleeps, validate redacted JSONL evidence, and
+  assert correction-packet contents.
+- Acceptance commands passed:
+  - `uv run ruff check .`
+  - `uv run ruff format --check .`
+  - `uv run mypy src`
+  - `uv run pytest` (102 tests)
+- Docker acceptance is still pending because `docker build -t autoharness:dev .` failed before
+  build start: the Docker daemon socket did not exist at
+  `/Users/ayush/.docker/run/docker.sock`.
+
+Still pending before the final Phase 5 completion record: rerun the Docker build and
+`docker run --rm autoharness:dev --help` after Docker is available.

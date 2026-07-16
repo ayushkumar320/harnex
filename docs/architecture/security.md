@@ -88,6 +88,13 @@ Every operation considered for retry is one of:
 Automatic retry is allowed only for proven read-only operations or idempotent operations with a supported guarantee. If a timeout occurs after an unknown side effect may have committed, return `commit_status_unknown` and stop.
 
 Maintain an attempt ledger with operation ID, attempt, start, completion, normalized result, and provider idempotency key when applicable.
+The Phase 5 runtime core records a start and finish ledger entry around each attempted operation.
+Unknown and non-idempotent operations receive one attempt only, idempotent operations require a
+stable key before retry is allowed, and logger failures must not change target-operation behavior
+or print unredacted fallback content.
+Malformed-output correction packets are allowed only before an external side effect. They carry a
+bounded, redacted user-goal summary and normalized failure metadata rather than raw prompts,
+outputs, headers, environment values, or provider error bodies.
 
 ## Sandbox Enforcement
 

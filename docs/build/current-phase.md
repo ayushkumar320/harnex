@@ -1,8 +1,9 @@
 # Current Phase
 
-We are building [Phase 4: Constrained generation](04-constrained-generation.md).
+We are building [Phase 5: Runtime reliability](05-runtime-reliability.md).
 
-Current status: Phase 4 is complete. Phase 5 has not started.
+Current status: Phase 4 is complete. Phase 5 implementation is complete; Docker acceptance
+gates are pending because the local Docker daemon was unavailable.
 
 Previously completed Phase 3 slices:
 
@@ -43,9 +44,23 @@ Completed Phase 4 slices:
 - AutoHarness-owned `.autoharness` artifact directory creation no longer makes scan freshness
   stale.
 
-Next phase:
+Current Phase 5 slices:
 
-- [Phase 5: Runtime reliability](05-runtime-reliability.md), after an explicit decision to begin
-  runtime reliability work.
+- Added the initial runtime reliability core with versioned runtime events, redacted JSONL
+  writing, normalized runtime failure kinds, side-effect classifications, an attempt ledger, and
+  a deterministic retry executor.
+- Added fault-injection tests for unsafe side-effect retry blocking, timeout after fake commit,
+  bounded rate-limit retries, idempotency-key policy blocking, seeded jitter, logger write
+  failure, hostile content, and default prompt/secret redaction.
+- Added compact malformed-output correction packets before side effects, cancellation handling,
+  human failure summaries, and generated direct-provider runtime adapters that run against fake
+  providers.
+- Generated runtime tests now exercise rate-limit retry behavior and malformed-output correction
+  packets after applying the approved direct-provider plan.
+
+Remaining Phase 5 gate:
+
+- Run `docker build -t autoharness:dev .` and `docker run --rm autoharness:dev --help` after the
+  Docker daemon is available, then append the final Phase 5 completion record.
 
 This pointer is intentionally simple. Update it when work moves to the next phase.
