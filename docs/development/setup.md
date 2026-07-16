@@ -57,6 +57,7 @@ uv run pytest
 ```
 
 Phase documents add targeted commands and acceptance checks.
+For CI scan gates and artifact upload examples, see [CI usage](ci.md).
 
 ## Local Scan Smoke
 

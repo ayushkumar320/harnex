@@ -30,6 +30,7 @@ This directory is the source of truth for product intent, architecture, developm
 ## Development
 
 - [Local and Docker setup](development/setup.md): UV, requirements, environment variables, quality checks, and containers
+- [CI usage](development/ci.md): read-only scan gates, artifact upload examples, and fixture precision snapshot
 
 ## Build
 

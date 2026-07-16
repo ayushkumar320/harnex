@@ -120,7 +120,36 @@ Do not begin generation. Run all gates, update public docs with the real finding
 - Acceptance commands for this slice passed: `uv run ruff check .`,
   `uv run ruff format --check .`, `uv run mypy src`, and `uv run pytest` (60 tests).
 
-Still in progress: LLM candidate synthesis through the configured router, deterministic
-acceptance of model-proposed finding text and plan text, broader stale artifact checks,
-CI examples, final fixture precision measurement, Docker gates, and the Phase 3 completion
-record.
+### 2026-07-16 Phase 3 Completion
+
+- Added a guarded LLM-proposed finding path through the Phase 2 router. Model output is accepted
+  only after schema, catalog rule, evidence ID, support-tier, generation-state, and local-path
+  validation. The default scan path remains deterministic and does not call a model.
+- Added deterministic validation for LLM-proposed plan actions. Accepted actions must cite active
+  findings, remain `review_only`, `read_only`, and `unresolved`, use adapters supported by cited
+  structural evidence, avoid output files and dependencies, and cite existing structural evidence
+  IDs when supplied.
+- Documented model-proposed finding and plan acceptance in
+  `docs/architecture/finding-catalog.md`.
+- Added CI usage examples and the Phase 3 fixture precision snapshot in `docs/development/ci.md`.
+- Updated the documentation index, setup guide, README CI command, and README support-tier text.
+- Fixture precision measurement on labeled repositories:
+  - `basic_agent`: 1 labeled reportable finding, 1 reported, 0 false positives.
+  - `edge_cases`: 4 labeled reportable findings, 4 reported, 0 false positives.
+  - `unsupported_text`: 0 labeled reportable findings, 0 reported, 0 false positives.
+  - Initial fixture precision: `5 / 5 = 1.00`.
+- Manual usability pass: `harness scan --fail-on high` writes the JSON artifact before returning
+  exit code `1` for high findings; `harness plan` remains read-only and exits `4` for blocked
+  plans while preserving the JSON artifact for review.
+- Acceptance commands passed:
+  - `uv run ruff check .`
+  - `uv run ruff format --check .`
+  - `uv run mypy src`
+  - `uv run pytest` (71 tests)
+  - `docker build -t autoharness:dev .`
+  - `docker run --rm autoharness:dev --help`
+- Known limitations deferred to later phases:
+  - LLM-assisted finding and plan synthesis is implemented as guarded callable paths, not enabled
+    by default CLI scan/plan commands.
+  - Planning remains audit-only; Phase 4 owns constrained generation, staging, diffs, and apply.
+  - Docker application image checks pass, but target-code sandbox enforcement remains Phase 6.

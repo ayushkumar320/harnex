@@ -106,6 +106,7 @@ Run the first read-only scanner:
 ```bash
 uv run harness scan . --output .autoharness/scan.json
 uv run harness scan . --format json --output .autoharness/scan.json
+uv run harness scan . --output .autoharness/scan.json --fail-on high
 ```
 
 `scan` parses Python files as data. It does not import target modules, run setup hooks, execute
@@ -147,13 +148,14 @@ The application image is not the sandbox backend. The sandbox backend uses a sep
 - [External web evidence](docs/architecture/external-evidence.md)
 - [Security model](docs/architecture/security.md)
 - [Development setup](docs/development/setup.md)
+- [CI usage](docs/development/ci.md)
 - [Phase-by-phase build plan](docs/build/README.md)
 - [Final-year and product-extension plans](docs/nextplans/README.md)
 - [Agent contribution contract](AGENTS.md)
 
 ## Safety Position
 
-AutoHarness is not proof that an agent is production-safe. Static analysis can miss dynamic behavior, model output is untrusted, retries can duplicate side effects, and a policy file is not a sandbox. Findings always carry evidence, confidence, and a support tier: `verified`, `detected`, `unknown`, or `unsafe`.
+AutoHarness is not proof that an agent is production-safe. Static analysis can miss dynamic behavior, model output is untrusted, retries can duplicate side effects, and a policy file is not a sandbox. Findings always carry evidence, confidence, and a support tier: `supported`, `detected`, or `unsupported`.
 
 ## License
 

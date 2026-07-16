@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -12,10 +12,10 @@ from rich.console import Console
 from rich.table import Table
 
 from autoharness.errors import AutoHarnessError, ErrorContext
-from autoharness.findings import GenerationState
+from autoharness.findings import Finding, GenerationState
 from autoharness.reporter import fingerprint_for_inventory
 from autoharness.repository import build_inventory
-from autoharness.scan_models import AuditReport
+from autoharness.scan_models import AuditReport, StructuralFact
 
 
 class PlanAction(BaseModel):
@@ -46,6 +46,37 @@ class HarnessPlan(BaseModel):
     blocked_findings: list[str]
     unresolved_decisions: list[str]
     next_action: str
+
+
+class ModelPlanActionCandidate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str
+    finding_ids: list[str]
+    adapter: str
+    permission: str
+    files: list[str] = Field(default_factory=list)
+    dependencies: list[str] = Field(default_factory=list)
+    side_effect_classification: str
+    verification: list[str]
+    approval_state: str
+    evidence_ids: list[str] = Field(default_factory=list)
+    blocked_reason: str | None = None
+
+
+class ModelPlanValidationIssue(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    field: str
+    message: str
+    finding_id: str | None = None
+
+
+class AcceptedModelPlanActions(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    accepted: list[PlanAction]
+    rejected: list[ModelPlanValidationIssue]
 
 
 def load_scan_report(path: Path) -> tuple[AuditReport, str]:
@@ -114,6 +145,26 @@ def build_plan(report: AuditReport, *, scan_hash: str, scan_path: Path) -> Harne
     )
 
 
+def validate_model_plan_action_candidates(
+    candidates: list[ModelPlanActionCandidate],
+    *,
+    report: AuditReport,
+) -> AcceptedModelPlanActions:
+    findings_by_id = {finding.id: finding for finding in report.findings if not finding.suppressed}
+    facts_by_id = {fact.evidence_hash: fact for fact in report.facts}
+    accepted: list[PlanAction] = []
+    rejected: list[ModelPlanValidationIssue] = []
+
+    for candidate in candidates:
+        issues = _model_plan_candidate_issues(candidate, findings_by_id, facts_by_id)
+        if issues:
+            rejected.extend(issues)
+            continue
+        accepted.append(_accepted_model_plan_action(candidate))
+    accepted.sort(key=lambda item: item.id)
+    return AcceptedModelPlanActions(accepted=accepted, rejected=rejected)
+
+
 def canonical_plan_json(plan: HarnessPlan) -> str:
     payload = plan.model_dump(mode="json", exclude_none=True)
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
@@ -159,6 +210,137 @@ def _instrumentation_action(finding_id: str) -> PlanAction:
         ],
         approval_state="unresolved",
     )
+
+
+def _model_plan_candidate_issues(
+    candidate: ModelPlanActionCandidate,
+    findings_by_id: dict[str, Finding],
+    facts_by_id: dict[str, StructuralFact],
+) -> list[ModelPlanValidationIssue]:
+    issues: list[ModelPlanValidationIssue] = []
+    if not candidate.finding_ids:
+        issues.append(_plan_issue("finding_ids", "At least one finding ID is required."))
+    if candidate.permission != "review_only":
+        issues.append(
+            _plan_issue("permission", "Phase 3 model plans may only request review_only.")
+        )
+    if candidate.files:
+        issues.append(_plan_issue("files", "Phase 3 model plans may not declare output files."))
+    if candidate.dependencies:
+        issues.append(_plan_issue("dependencies", "Phase 3 model plans may not add dependencies."))
+    if candidate.side_effect_classification != "read_only":
+        issues.append(
+            _plan_issue(
+                "side_effect_classification",
+                "Review-only Phase 3 plan actions must be read_only.",
+            )
+        )
+    if candidate.approval_state != "unresolved":
+        issues.append(
+            _plan_issue("approval_state", "The model cannot approve or block its own action.")
+        )
+    if not candidate.verification:
+        issues.append(
+            _plan_issue("verification", "At least one verification check must be declared.")
+        )
+    for path in candidate.files:
+        if _unsafe_plan_path(path):
+            issues.append(_plan_issue("files", f"Plan file path is not safe: {path}"))
+    for finding_id in candidate.finding_ids:
+        finding = findings_by_id.get(finding_id)
+        if finding is None:
+            issues.append(
+                _plan_issue(
+                    "finding_ids",
+                    "Plan action cites a missing or suppressed finding.",
+                    finding_id=finding_id,
+                )
+            )
+            continue
+        if not _is_supported_model_plan_finding(finding):
+            issues.append(
+                _plan_issue(
+                    "finding_ids",
+                    "Phase 3 model planning only accepts unresolved AH-R101 review actions.",
+                    finding_id=finding_id,
+                )
+            )
+        if not _adapter_matches_finding(candidate.adapter, finding, facts_by_id):
+            issues.append(
+                _plan_issue(
+                    "adapter",
+                    "Plan adapter is not supported by the cited finding evidence.",
+                    finding_id=finding_id,
+                )
+            )
+    valid_evidence_ids = set(facts_by_id)
+    for evidence_id in candidate.evidence_ids:
+        if evidence_id not in valid_evidence_ids:
+            issues.append(
+                _plan_issue("evidence_ids", f"Plan evidence ID does not exist: {evidence_id}")
+            )
+    return issues
+
+
+def _accepted_model_plan_action(candidate: ModelPlanActionCandidate) -> PlanAction:
+    digest = hashlib.sha256(
+        "|".join(
+            [
+                candidate.title,
+                candidate.adapter,
+                *sorted(candidate.finding_ids),
+                *sorted(candidate.evidence_ids),
+            ]
+        ).encode()
+    ).hexdigest()[:10]
+    return PlanAction(
+        id=f"model-plan-action-{digest}",
+        title=candidate.title,
+        finding_ids=sorted(candidate.finding_ids),
+        adapter=candidate.adapter,
+        permission="review_only",
+        files=[],
+        dependencies=[],
+        side_effect_classification="read_only",
+        verification=candidate.verification,
+        approval_state="unresolved",
+    )
+
+
+def _is_supported_model_plan_finding(finding: Finding) -> bool:
+    return (
+        getattr(finding, "rule_id", None) == "AH-R101"
+        and getattr(finding, "generation", None) is GenerationState.REVIEW_REQUIRED
+    )
+
+
+def _adapter_matches_finding(
+    adapter: str,
+    finding: Finding,
+    facts_by_id: dict[str, StructuralFact],
+) -> bool:
+    if adapter not in {"openai_compatible", "groq", "huggingface"}:
+        return False
+    evidence_items = getattr(finding, "evidence", [])
+    for evidence in evidence_items:
+        fact = facts_by_id.get(getattr(evidence, "id", ""))
+        if fact is not None and adapter in getattr(fact, "adapter_candidates", []):
+            return True
+    return False
+
+
+def _unsafe_plan_path(path: str) -> bool:
+    candidate = PurePosixPath(path)
+    return candidate.is_absolute() or ".." in candidate.parts
+
+
+def _plan_issue(
+    field: str,
+    message: str,
+    *,
+    finding_id: str | None = None,
+) -> ModelPlanValidationIssue:
+    return ModelPlanValidationIssue(field=field, message=message, finding_id=finding_id)
 
 
 def _sha256(text: str) -> str:
