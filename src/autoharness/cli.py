@@ -7,8 +7,9 @@ from pydantic import ValidationError
 from autoharness import __version__
 from autoharness.config import ConfigOverrides, load_config
 from autoharness.doctor import doctor_report
-from autoharness.errors import AutoHarnessError, render_error
+from autoharness.errors import AutoHarnessError, ErrorContext, render_error
 from autoharness.generation import (
+    apply_approved_plan,
     canonical_apply_preview_json,
     render_apply_preview,
     stage_apply_preview,
@@ -277,6 +278,10 @@ def apply(
         bool,
         typer.Option("--dry-run", help="Stage generated files without writing target files."),
     ] = False,
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", help="Apply approved generated files without an interactive prompt."),
+    ] = False,
     output_format: Annotated[
         str | None,
         typer.Option("--format", help="Output format for this command: human or json."),
@@ -298,7 +303,7 @@ def apply(
         typer.Option("--quiet", "-q", help="Suppress non-essential human output."),
     ] = False,
 ) -> None:
-    """Preview constrained generation from an approved plan artifact."""
+    """Preview or apply constrained generation from an approved plan artifact."""
     try:
         config = load_config(
             ConfigOverrides(
@@ -309,11 +314,53 @@ def apply(
         )
         console = make_console(color=ColorMode(config.color), quiet=quiet)
         artifact_path = output if output.is_absolute() else Path.cwd() / output
-        preview = stage_apply_preview(
-            plan_path=plan_artifact,
-            output_path=artifact_path,
-            dry_run=dry_run,
-        )
+        if dry_run:
+            preview = stage_apply_preview(
+                plan_path=plan_artifact,
+                output_path=artifact_path,
+                dry_run=True,
+            )
+        else:
+            confirmed = yes
+            if not confirmed:
+                try:
+                    confirmed = typer.confirm(
+                        "Apply approved generated files to the repository?",
+                        default=False,
+                    )
+                except (typer.Abort, EOFError) as exc:
+                    raise AutoHarnessError(
+                        code="AH-G007",
+                        message="Apply requires explicit approval.",
+                        context=ErrorContext(
+                            field="yes",
+                            source="flag",
+                            expected="--yes or interactive confirmation",
+                            next_action=(
+                                "Run with --dry-run first, then pass --yes or confirm the prompt."
+                            ),
+                        ),
+                        exit_code=4,
+                    ) from exc
+            if not confirmed:
+                if OutputFormat(config.output_format) is OutputFormat.JSON:
+                    print_json(
+                        console,
+                        {
+                            "schema_version": "1.0",
+                            "artifact_type": "apply_result",
+                            "status": "declined",
+                            "message": "Apply declined; no target files were written.",
+                        },
+                    )
+                else:
+                    console.print("Apply declined: no target files were written.")
+                return
+            preview = apply_approved_plan(
+                plan_path=plan_artifact,
+                output_path=artifact_path,
+                confirm=True,
+            )
         if OutputFormat(config.output_format) is OutputFormat.JSON:
             console.file.write(canonical_apply_preview_json(preview) + "\n")
         else:

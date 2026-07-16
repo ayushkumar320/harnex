@@ -1,13 +1,16 @@
 import hashlib
 import json
 import os
+import py_compile
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
+import autoharness.generation as generation
 from autoharness.cli import app
-from autoharness.generation import SUPPORTED_OUTPUT_FILES, stage_apply_preview
+from autoharness.errors import AutoHarnessError
+from autoharness.generation import SUPPORTED_OUTPUT_FILES, apply_approved_plan, stage_apply_preview
 from autoharness.planning import HarnessPlan, PlanAction, canonical_plan_json
 from autoharness.reporter import write_report
 from autoharness.scan import scan_repository
@@ -60,13 +63,176 @@ def test_apply_cli_dry_run_outputs_machine_readable_preview(tmp_path: Path) -> N
     assert payload["mode"] == "dry_run"
 
 
-def test_apply_rejects_without_dry_run(tmp_path: Path) -> None:
+def test_apply_rejects_without_dry_run_or_approval(tmp_path: Path) -> None:
     _repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
 
     result = runner.invoke(app, ["apply", str(plan_path)])
 
     assert result.exit_code == 4
-    assert "AH-G002" in result.output
+    assert "AH-G007" in result.output
+
+
+def test_apply_yes_writes_generated_files_and_transaction_journal(tmp_path: Path) -> None:
+    repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
+    output_path = tmp_path / "apply-preview.json"
+
+    preview = apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
+
+    assert preview.status == "applied"
+    assert preview.mode == "apply"
+    assert preview.journal_path is not None
+    assert Path(preview.journal_path).exists()
+    for rel_path in SUPPORTED_OUTPUT_FILES:
+        assert (repo / rel_path).is_file()
+    payload = json.loads(Path(preview.journal_path).read_text(encoding="utf-8"))
+    assert payload["artifact_type"] == "apply_transaction_journal"
+    assert payload["status"] == "applied"
+    assert len(payload["files"]) == len(SUPPORTED_OUTPUT_FILES)
+
+
+def test_apply_cli_yes_outputs_applied_preview(tmp_path: Path) -> None:
+    _repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
+    output_path = tmp_path / "preview.json"
+
+    result = runner.invoke(
+        app,
+        ["apply", str(plan_path), "--yes", "--format", "json", "--output", str(output_path)],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["status"] == "applied"
+    assert payload["mode"] == "apply"
+    assert payload["journal_path"]
+
+
+def test_apply_prompt_decline_is_clean_noop(tmp_path: Path) -> None:
+    repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
+
+    result = runner.invoke(app, ["apply", str(plan_path)], input="n\n")
+
+    assert result.exit_code == 0
+    assert "Apply declined" in result.output
+    assert not (repo / ".autoharness/generated/autoharness_config.py").exists()
+
+
+def test_apply_prompt_accept_applies_files(tmp_path: Path) -> None:
+    repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
+
+    result = runner.invoke(app, ["apply", str(plan_path)], input="y\n")
+
+    assert result.exit_code == 0
+    assert "Status: applied" in result.output
+    assert (repo / ".autoharness/generated/autoharness_config.py").is_file()
+
+
+def test_apply_clean_second_apply_is_allowed(tmp_path: Path) -> None:
+    repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
+    output_path = tmp_path / "apply-preview.json"
+
+    first = apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
+    second = apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
+
+    assert first.status == "applied"
+    assert second.status == "applied"
+    assert (repo / ".autoharness/generated/autoharness_config.py").is_file()
+
+
+def test_apply_reapply_preserves_append_only_user_edit(tmp_path: Path) -> None:
+    repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
+    output_path = tmp_path / "apply-preview.json"
+    apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
+    target = repo / ".autoharness/generated/autoharness_config.py"
+    target.write_text(target.read_text(encoding="utf-8") + "\n# user note\n", encoding="utf-8")
+
+    apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
+
+    assert target.read_text(encoding="utf-8").endswith("\n# user note\n")
+
+
+def test_apply_reapply_conflicts_on_generated_region_edit(tmp_path: Path) -> None:
+    repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
+    output_path = tmp_path / "apply-preview.json"
+    apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
+    target = repo / ".autoharness/generated/autoharness_config.py"
+    target.write_text("# edited inside generated base\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["apply", str(plan_path), "--yes", "--verbose"])
+
+    assert result.exit_code == 4
+    assert "AH-G010" in result.output
+    assert target.read_text(encoding="utf-8") == "# edited inside generated base\n"
+
+
+def test_apply_rolls_back_when_later_write_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
+    output_path = tmp_path / "apply-preview.json"
+    original_atomic_write = generation._atomic_write
+
+    def fail_on_logger(path: Path, data: bytes) -> None:
+        if path.name == "autoharness_jsonl_logger.py":
+            raise OSError("simulated write failure")
+        original_atomic_write(path, data)
+
+    monkeypatch.setattr(generation, "_atomic_write", fail_on_logger)
+
+    with pytest.raises(AutoHarnessError) as exc_info:
+        apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
+
+    assert exc_info.value.code == "AH-G009"
+    assert not (repo / ".autoharness/generated/autoharness_config.py").exists()
+    journal_paths = list((repo / ".autoharness" / "transactions").glob("*.json"))
+    assert len(journal_paths) == 1
+    payload = json.loads(journal_paths[0].read_text(encoding="utf-8"))
+    assert payload["status"] == "rolled_back"
+
+
+def test_apply_cli_reports_structured_rollback_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
+    original_atomic_write = generation._atomic_write
+
+    def fail_on_logger(path: Path, data: bytes) -> None:
+        if path.name == "autoharness_jsonl_logger.py":
+            raise OSError("simulated write failure")
+        original_atomic_write(path, data)
+
+    monkeypatch.setattr(generation, "_atomic_write", fail_on_logger)
+
+    result = runner.invoke(app, ["apply", str(plan_path), "--yes"])
+
+    assert result.exit_code == 5
+    assert "AH-G009" in result.output
+    assert not (repo / ".autoharness/generated/autoharness_config.py").exists()
+
+
+def test_apply_rejects_special_file_target(tmp_path: Path) -> None:
+    repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
+    target = repo / ".autoharness/generated/autoharness_config.py"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.mkdir()
+
+    result = runner.invoke(app, ["apply", str(plan_path), "--yes", "--verbose"])
+
+    assert result.exit_code == 4
+    assert "AH-G006" in result.output
+    assert target.is_dir()
+
+
+def test_generated_python_artifacts_compile_after_apply(tmp_path: Path) -> None:
+    repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
+    output_path = tmp_path / "apply-preview.json"
+
+    apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
+
+    for rel_path in SUPPORTED_OUTPUT_FILES:
+        if rel_path.endswith(".py"):
+            py_compile.compile(str(repo / rel_path), doraise=True)
 
 
 def test_apply_rejects_unapproved_review_plan(tmp_path: Path) -> None:

@@ -2,7 +2,7 @@
 
 We are building [Phase 4: Constrained generation](04-constrained-generation.md).
 
-Current status: Phase 4 is in progress, not complete.
+Current status: Phase 4 is complete. Phase 5 has not started.
 
 Previously completed Phase 3 slices:
 
@@ -31,16 +31,21 @@ Completed Phase 4 slices:
 - Phase 4 apply rejects non-dry-run invocation, unapproved actions, unsupported adapters, unsafe
   paths, stale scan artifacts, and missing generation actions before target writes.
 - Declared output paths with existing symlink components are rejected before staging.
+- `harness apply --yes` writes approved generated files with atomic replacement, records a
+  transaction journal, and automatically rolls back files written earlier in the transaction when a
+  later write fails.
+- Existing generated target files are rejected without overwrite until three-way reapplication is
+  implemented.
+- Interactive confirmation is supported; declined approval exits cleanly without target writes.
+- Three-way reapplication replaces unchanged generated bases, preserves append-only user edits,
+  and rejects edits inside generated base regions with a conflict.
+- Generated Python artifacts compile in a disposable fixture flow.
 - AutoHarness-owned `.autoharness` artifact directory creation no longer makes scan freshness
   stale.
 
-Remaining before Phase 4 completion:
+Next phase:
 
-- Interactive confirmation and non-interactive explicit apply flag.
-- Atomic target-file application with transaction journal and rollback.
-- Three-way reapplication preserving compatible user edits and reporting conflicts.
-- Full initial generated artifact set validation against a disposable fixture repo.
-- Special-file/interrupted-write negative tests.
-- Docs, Docker gates, and Phase 4 completion record.
+- [Phase 5: Runtime reliability](05-runtime-reliability.md), after an explicit decision to begin
+  runtime reliability work.
 
 This pointer is intentionally simple. Update it when work moves to the next phase.

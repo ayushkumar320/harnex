@@ -103,8 +103,8 @@ Run all previous and current gates. Update docs with exact generated files and r
 
 ### 2026-07-16 Initial Dry-Run Staging Slice
 
-- Added `harness apply` with a Phase 4 guarded preview path. This first slice requires
-  `--dry-run`; non-dry-run apply exits with `AH-G002` before any target write.
+- Added `harness apply` with a Phase 4 guarded preview path. This first slice required
+  `--dry-run` and performed no target writes.
 - Added a constrained generation module that loads `HarnessPlan` artifacts, validates the
   referenced scan hash and repository freshness, accepts only approved
   `write_generated_files` actions for the `openai_compatible` adapter, and rejects unsafe paths,
@@ -129,3 +129,58 @@ Run all previous and current gates. Update docs with exact generated files and r
 Still in progress: confirmed target-file application, interactive approval, transaction journal,
 rollback, three-way reapplication, conflict handling, special-file/interruption negative
 tests, Docker gates, and the Phase 4 completion record.
+
+### 2026-07-16 Confirmed Apply and Rollback Slice
+
+- Added explicit non-interactive approval with `harness apply --yes`. Running `apply` without
+  `--dry-run` or `--yes` exits with `AH-G007` before writing target files.
+- Added atomic replacement from staged generated files into the approved generated paths.
+- Added transaction journals under `.autoharness/transactions/<transaction-id>.json` with
+  transaction status, plan hash, repository root, per-file previous hash, backup path when a file
+  existed, and new content hash.
+- Added automatic rollback for files already written in the transaction if a later write fails.
+  Rollback failures are not hidden, and the original write failure is surfaced as structured error
+  `AH-G009` after the rollback attempt.
+- Existing generated target files are rejected with `AH-G010` and left unchanged until the
+  three-way reapplication slice is implemented.
+- Added tests for successful `--yes` application, machine-readable applied preview output,
+  transaction journal creation, existing-target rejection, and rollback after a simulated later
+  write failure.
+- Acceptance commands for this slice passed: `uv run ruff check .`,
+  `uv run ruff format --check .`, `uv run mypy src`, and `uv run pytest` (82 tests).
+
+Still in progress: interactive approval prompt, three-way reapplication, conflict handling,
+full generated artifact validation against a disposable fixture repo, special-file/interruption
+negative tests, Docker gates, and the Phase 4 completion record.
+
+### 2026-07-16 Phase 4 Completion
+
+- Added interactive confirmation for `harness apply`; declined approval exits successfully and
+  writes no target files. `--yes` remains the non-interactive explicit approval flag.
+- Implemented three-way reapplication using the transaction journal's generated-base snapshots:
+  unchanged generated files are replaced, append-only user edits are preserved, and edits inside
+  the generated base region stop with structured conflict `AH-G010`.
+- Added special-file rejection before staging hashes or writes. Directories and symlink components
+  in generated output paths fail closed.
+- Added structured rollback handling for interrupted writes. If a later file write fails, files
+  already written in the transaction are removed or restored and the journal records
+  `rolled_back`.
+- Added a disposable fixture flow that scans `basic_agent`, creates an explicitly approved
+  generation plan, applies generated files, and compiles all generated Python artifacts.
+- Final generated files for the direct-provider slice:
+  - `.autoharness/generated/autoharness_config.py`
+  - `.autoharness/generated/autoharness_jsonl_logger.py`
+  - `.autoharness/generated/autoharness_runner.py`
+  - `.autoharness/generated/tests/test_autoharness_smoke.py`
+- Acceptance commands passed:
+  - `uv run ruff check .`
+  - `uv run ruff format --check .`
+  - `uv run mypy src`
+  - `uv run pytest` (89 tests)
+  - disposable scan-plan-apply-compile fixture flow
+  - `docker build -t autoharness:dev .`
+  - `docker run --rm autoharness:dev --help`
+- Known limitations deferred to later phases:
+  - Generated files are review skeletons; full runtime retry behavior remains Phase 5.
+  - Generated smoke tests are syntax/import scaffolds, not isolated target execution.
+  - Sandbox enforcement remains Phase 6.

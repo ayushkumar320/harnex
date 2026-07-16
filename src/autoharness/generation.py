@@ -44,14 +44,38 @@ class ApplyPreview(BaseModel):
 
     schema_version: Literal["1.0"] = "1.0"
     artifact_type: Literal["apply_preview"] = "apply_preview"
-    status: Literal["staged"]
-    mode: Literal["dry_run"]
+    status: Literal["staged", "applied"]
+    mode: Literal["dry_run", "apply"]
     plan_hash: str
     plan_path: str
     repository_root: str
     staging_root: str
     files: list[GeneratedFileManifest]
+    transaction_id: str | None = None
+    journal_path: str | None = None
     next_action: str
+
+
+class TransactionFile(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    path: str
+    previous_hash: str | None = None
+    previous_backup_path: str | None = None
+    generated_base_path: str | None = None
+    new_hash: str
+
+
+class ApplyTransactionJournal(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["1.0"] = "1.0"
+    artifact_type: Literal["apply_transaction_journal"] = "apply_transaction_journal"
+    transaction_id: str
+    status: Literal["applied", "rolled_back"]
+    plan_hash: str
+    repository_root: str
+    files: list[TransactionFile]
 
 
 def load_plan_artifact(path: Path) -> tuple[HarnessPlan, str]:
@@ -71,6 +95,23 @@ def load_plan_artifact(path: Path) -> tuple[HarnessPlan, str]:
             exit_code=4,
         ) from exc
     return plan, _sha256_text(raw)
+
+
+def load_transaction_journal(path: Path) -> ApplyTransactionJournal:
+    try:
+        return ApplyTransactionJournal.model_validate_json(path.read_text(encoding="utf-8"))
+    except (OSError, ValidationError, json.JSONDecodeError) as exc:
+        raise AutoHarnessError(
+            code="AH-G011",
+            message="Existing transaction journal is not compatible.",
+            context=ErrorContext(
+                field="journal",
+                source="transaction journal",
+                expected="A readable AutoHarness apply_transaction_journal artifact.",
+                next_action="Review the existing generated files before reapplying.",
+            ),
+            exit_code=4,
+        ) from exc
 
 
 def stage_apply_preview(
@@ -115,6 +156,59 @@ def stage_apply_preview(
     return preview
 
 
+def apply_approved_plan(
+    *,
+    plan_path: Path,
+    output_path: Path,
+    confirm: bool,
+) -> ApplyPreview:
+    if not confirm:
+        raise AutoHarnessError(
+            code="AH-G007",
+            message="Apply requires explicit approval.",
+            context=ErrorContext(
+                field="yes",
+                source="flag",
+                expected="--yes",
+                next_action="Run with --dry-run first, then pass --yes to apply staged files.",
+            ),
+            exit_code=4,
+        )
+    plan, plan_hash = load_plan_artifact(plan_path)
+    repository_root = _validate_plan_source(plan)
+    actions = _approved_generation_actions(plan)
+    staging_root = repository_root / ".autoharness" / "staging" / _hash_suffix(plan_hash)
+    manifests = _stage_actions(
+        actions,
+        repository_root=repository_root,
+        staging_root=staging_root,
+        plan_hash=plan_hash,
+    )
+    transaction_id = _hash_suffix(plan_hash)
+    journal_path = repository_root / ".autoharness" / "transactions" / f"{transaction_id}.json"
+    journal = _apply_staged_files(
+        manifests,
+        repository_root=repository_root,
+        plan_hash=plan_hash,
+        transaction_id=transaction_id,
+        journal_path=journal_path,
+    )
+    preview = ApplyPreview(
+        status="applied",
+        mode="apply",
+        plan_hash=plan_hash,
+        plan_path=str(plan_path),
+        repository_root=str(repository_root),
+        staging_root=str(staging_root),
+        files=manifests,
+        transaction_id=journal.transaction_id,
+        journal_path=str(journal_path),
+        next_action="Review the applied files. Use the transaction journal as the rollback record.",
+    )
+    write_apply_preview(output_path, preview)
+    return preview
+
+
 def canonical_apply_preview_json(preview: ApplyPreview) -> str:
     payload = preview.model_dump(mode="json", exclude_none=True)
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
@@ -125,8 +219,23 @@ def write_apply_preview(path: Path, preview: ApplyPreview) -> None:
     path.write_text(canonical_apply_preview_json(preview) + "\n", encoding="utf-8")
 
 
+def canonical_transaction_json(journal: ApplyTransactionJournal) -> str:
+    payload = journal.model_dump(mode="json", exclude_none=True)
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+
+def write_transaction_journal(path: Path, journal: ApplyTransactionJournal) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(canonical_transaction_json(journal) + "\n", encoding="utf-8")
+
+
 def render_apply_preview(console: Console, preview: ApplyPreview, *, artifact_path: Path) -> None:
-    console.print("AutoHarness apply dry-run: staged files were written under .autoharness only.")
+    if preview.mode == "dry_run":
+        console.print(
+            "AutoHarness apply dry-run: staged files were written under .autoharness only."
+        )
+    else:
+        console.print("AutoHarness apply completed with a transaction journal.")
     console.print(f"Status: {preview.status}")
     table = Table(show_header=False, box=None, padding=(0, 2))
     table.add_column("Metric")
@@ -136,6 +245,8 @@ def render_apply_preview(console: Console, preview: ApplyPreview, *, artifact_pa
     console.print(table)
     for item in preview.files:
         console.print(f"- {item.path} -> {item.staged_path}")
+    if preview.journal_path is not None:
+        console.print(f"Transaction journal: {preview.journal_path}")
     console.print(f"Detailed JSON: {artifact_path}")
     console.print(f"Next: {preview.next_action}")
 
@@ -224,6 +335,8 @@ def _stage_actions(
     for action in sorted(actions, key=lambda item: item.id):
         for rel_path, content in _render_templates(action).items():
             target_path = _target_path(repository_root, rel_path)
+            if target_path.exists() and not target_path.is_file():
+                raise _path_error(rel_path)
             base_hash = _sha256_bytes(target_path.read_bytes()) if target_path.exists() else None
             staged_path = _staged_path(staging_root, rel_path)
             staged_path.parent.mkdir(parents=True, exist_ok=True)
@@ -243,6 +356,203 @@ def _stage_actions(
             )
     manifests.sort(key=lambda item: item.path)
     return manifests
+
+
+def _apply_staged_files(
+    manifests: list[GeneratedFileManifest],
+    *,
+    repository_root: Path,
+    plan_hash: str,
+    transaction_id: str,
+    journal_path: Path,
+) -> ApplyTransactionJournal:
+    files: list[TransactionFile] = []
+    applied: list[tuple[Path, Path | None]] = []
+    previous_journal = _load_existing_journal(journal_path)
+    try:
+        for manifest in manifests:
+            target = _target_path(repository_root, manifest.path)
+            staged = Path(manifest.staged_path)
+            if not staged.is_file():
+                raise AutoHarnessError(
+                    code="AH-G008",
+                    message="Staged generated file is missing.",
+                    context=ErrorContext(
+                        field="staged_path",
+                        source="apply preview",
+                        expected="An existing staged file.",
+                        next_action="Run harness apply again to regenerate the staging area.",
+                    ),
+                    exit_code=4,
+                    details={"staged_path": str(staged)},
+                )
+            previous_hash: str | None = None
+            previous_backup_path: str | None = None
+            generated_base_path = _generated_base_path(journal_path, manifest.path)
+            if target.exists():
+                if not target.is_file():
+                    raise _path_error(manifest.path)
+                previous_entry = (
+                    _journal_file(previous_journal, manifest.path)
+                    if previous_journal is not None
+                    else None
+                )
+                data = _merge_reapply_content(
+                    manifest=manifest,
+                    current_path=target,
+                    staged_path=staged,
+                    previous_entry=previous_entry,
+                )
+                previous_hash = _sha256_bytes(target.read_bytes())
+            else:
+                data = staged.read_bytes()
+            target.parent.mkdir(parents=True, exist_ok=True)
+            _atomic_write(target, data)
+            generated_base_path.parent.mkdir(parents=True, exist_ok=True)
+            generated_base_path.write_bytes(staged.read_bytes())
+            applied.append((target, None))
+            files.append(
+                TransactionFile(
+                    path=manifest.path,
+                    previous_hash=previous_hash,
+                    previous_backup_path=previous_backup_path,
+                    generated_base_path=str(generated_base_path),
+                    new_hash=manifest.content_hash,
+                )
+            )
+        journal = ApplyTransactionJournal(
+            transaction_id=transaction_id,
+            status="applied",
+            plan_hash=plan_hash,
+            repository_root=str(repository_root),
+            files=files,
+        )
+        write_transaction_journal(journal_path, journal)
+        return journal
+    except AutoHarnessError:
+        _rollback_applied(applied)
+        rolled_back = ApplyTransactionJournal(
+            transaction_id=transaction_id,
+            status="rolled_back",
+            plan_hash=plan_hash,
+            repository_root=str(repository_root),
+            files=files,
+        )
+        write_transaction_journal(journal_path, rolled_back)
+        raise
+    except Exception as exc:
+        _rollback_applied(applied)
+        rolled_back = ApplyTransactionJournal(
+            transaction_id=transaction_id,
+            status="rolled_back",
+            plan_hash=plan_hash,
+            repository_root=str(repository_root),
+            files=files,
+        )
+        write_transaction_journal(journal_path, rolled_back)
+        raise AutoHarnessError(
+            code="AH-G009",
+            message="Apply failed and previously written files were rolled back.",
+            context=ErrorContext(
+                field="files",
+                source="apply transaction",
+                expected="All generated files can be written atomically.",
+                next_action=(
+                    "Inspect the transaction journal and retry after resolving the write failure."
+                ),
+            ),
+            exit_code=5,
+            details={"transaction_id": transaction_id, "cause": str(exc)},
+        ) from exc
+
+
+def _atomic_write(path: Path, data: bytes) -> None:
+    temp = path.with_name(f".{path.name}.autoharness-tmp")
+    temp.write_bytes(data)
+    temp.replace(path)
+
+
+def _rollback_applied(applied: list[tuple[Path, Path | None]]) -> None:
+    for target, backup in reversed(applied):
+        if backup is None:
+            if target.exists():
+                target.unlink()
+            continue
+        _atomic_write(target, backup.read_bytes())
+
+
+def _load_existing_journal(path: Path) -> ApplyTransactionJournal | None:
+    if not path.exists():
+        return None
+    journal = load_transaction_journal(path)
+    if journal.status != "applied":
+        return None
+    return journal
+
+
+def _journal_file(
+    journal: ApplyTransactionJournal | None,
+    rel_path: str,
+) -> TransactionFile | None:
+    if journal is None:
+        return None
+    for item in journal.files:
+        if item.path == rel_path:
+            return item
+    return None
+
+
+def _merge_reapply_content(
+    *,
+    manifest: GeneratedFileManifest,
+    current_path: Path,
+    staged_path: Path,
+    previous_entry: TransactionFile | None,
+) -> bytes:
+    if previous_entry is None or previous_entry.generated_base_path is None:
+        raise _reapply_conflict(manifest.path, "No prior generated base is available.")
+    base_path = Path(previous_entry.generated_base_path)
+    if not base_path.is_file():
+        raise _reapply_conflict(manifest.path, "Prior generated base snapshot is missing.")
+    current = current_path.read_bytes()
+    base = base_path.read_bytes()
+    new = staged_path.read_bytes()
+    current_hash = _sha256_bytes(current)
+    if current_hash == manifest.content_hash:
+        return current
+    if current_hash == previous_entry.new_hash:
+        return new
+    if current.startswith(base):
+        suffix = current[len(base) :]
+        if not _looks_generated_conflict_suffix(suffix):
+            return new + suffix
+    raise _reapply_conflict(
+        manifest.path,
+        "Current file has edits inside the generated base region.",
+    )
+
+
+def _looks_generated_conflict_suffix(suffix: bytes) -> bool:
+    return b"<<<<<<<" in suffix or b"=======" in suffix or b">>>>>>>" in suffix
+
+
+def _reapply_conflict(path: str, reason: str) -> AutoHarnessError:
+    return AutoHarnessError(
+        code="AH-G010",
+        message="Generated target has unmergeable local edits.",
+        context=ErrorContext(
+            field="files",
+            source="target repository",
+            expected="Unchanged generated base or append-only user edits.",
+            next_action="Review the existing generated file and resolve the conflict manually.",
+        ),
+        exit_code=4,
+        details={"path": path, "reason": reason},
+    )
+
+
+def _generated_base_path(journal_path: Path, rel_path: str) -> Path:
+    return journal_path.parent / journal_path.stem / "generated-base" / rel_path
 
 
 def _render_templates(action: PlanAction) -> dict[str, str]:

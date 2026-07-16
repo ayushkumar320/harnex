@@ -72,15 +72,23 @@ Python source as data. It writes only the requested report artifact.
 
 ## Apply Preview Smoke
 
-Phase 4 begins with dry-run staging only. `apply` requires an explicitly approved plan artifact and
-does not write target files unless a later phase slice adds confirmed mutation:
+Phase 4 apply requires an explicitly approved plan artifact. Preview first:
 
 ```bash
 uv run harness apply .autoharness/plan.json --dry-run --output .autoharness/apply-preview.json
 ```
 
+Then apply non-interactively only when the preview is acceptable:
+
+```bash
+uv run harness apply .autoharness/plan.json --yes --output .autoharness/apply-preview.json
+```
+
 The preview writes staged generated files under `.autoharness/staging/` and emits a canonical JSON
-manifest. Non-dry-run apply currently exits before writing target files.
+manifest. Confirmed apply writes approved generated files, records a transaction journal under
+`.autoharness/transactions/`, and rolls back files written earlier in the transaction if a later
+write fails. Reapply preserves append-only edits after the generated base and stops with a
+conflict when edits are made inside the generated base region.
 
 ## Provider Diagnostics
 
