@@ -30,7 +30,7 @@ class PlanAction(BaseModel):
     dependencies: list[str] = Field(default_factory=list)
     side_effect_classification: Literal["read_only", "unknown"]
     verification: list[str]
-    approval_state: Literal["unresolved", "blocked"]
+    approval_state: Literal["unresolved", "blocked", "approved"]
     blocked_reason: str | None = None
 
 

@@ -101,11 +101,20 @@ def write_report(path: Path, report: AuditReport) -> None:
 
 
 def fingerprint_for_inventory(inventory: RepositoryInventory) -> ArtifactFingerprint:
-    inventory_payload = inventory.model_dump(
+    stable_inventory = inventory.model_copy(
+        update={
+            "excluded_paths": [
+                item
+                for item in inventory.excluded_paths
+                if not (item.path == ".autoharness" and item.reason == "default_excluded_directory")
+            ]
+        }
+    )
+    inventory_payload = stable_inventory.model_dump(
         mode="json",
         include={"included_files", "excluded_paths", "language_counts"},
     )
-    config_payload = inventory.scan_config.model_dump(mode="json")
+    config_payload = stable_inventory.scan_config.model_dump(mode="json")
     return ArtifactFingerprint(
         inventory_hash=_sha256_json(inventory_payload),
         scan_config_hash=_sha256_json(config_payload),

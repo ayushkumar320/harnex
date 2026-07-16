@@ -101,4 +101,31 @@ Run all previous and current gates. Update docs with exact generated files and r
 
 ## Phase Completion Record
 
-Not started.
+### 2026-07-16 Initial Dry-Run Staging Slice
+
+- Added `harness apply` with a Phase 4 guarded preview path. This first slice requires
+  `--dry-run`; non-dry-run apply exits with `AH-G002` before any target write.
+- Added a constrained generation module that loads `HarnessPlan` artifacts, validates the
+  referenced scan hash and repository freshness, accepts only approved
+  `write_generated_files` actions for the `openai_compatible` adapter, and rejects unsafe paths,
+  unapproved actions, unsupported adapters, stale scan artifacts, and missing generation actions.
+- Added deterministic staging under `.autoharness/staging/<plan-hash>/` plus a canonical
+  `apply_preview` JSON artifact.
+- Added generated-file manifest entries with target path, staged path, generator version, template
+  version, plan hash, base hash when present, content hash, and action ID.
+- The initial direct-provider template set stages:
+  - `.autoharness/generated/autoharness_config.py`
+  - `.autoharness/generated/autoharness_jsonl_logger.py`
+  - `.autoharness/generated/autoharness_runner.py`
+  - `.autoharness/generated/tests/test_autoharness_smoke.py`
+- Adjusted scan freshness fingerprinting so AutoHarness' own `.autoharness` artifact directory
+  does not make a source scan stale.
+- Added tests for deterministic dry-run staging, machine-readable CLI preview output,
+  non-dry-run rejection, unapproved plan rejection, stale plan rejection, unsafe output path
+  rejection, and symlink output component rejection.
+- Acceptance commands for this slice passed: `uv run ruff check .`,
+  `uv run ruff format --check .`, `uv run mypy src`, and `uv run pytest` (78 tests).
+
+Still in progress: confirmed target-file application, interactive approval, transaction journal,
+rollback, three-way reapplication, conflict handling, special-file/interruption negative
+tests, Docker gates, and the Phase 4 completion record.

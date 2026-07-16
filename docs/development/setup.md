@@ -70,6 +70,18 @@ uv run harness scan tests/fixtures/repositories/unsupported_text --output /tmp/a
 The scan command is read-only with respect to target code execution: it inventories files and parses
 Python source as data. It writes only the requested report artifact.
 
+## Apply Preview Smoke
+
+Phase 4 begins with dry-run staging only. `apply` requires an explicitly approved plan artifact and
+does not write target files unless a later phase slice adds confirmed mutation:
+
+```bash
+uv run harness apply .autoharness/plan.json --dry-run --output .autoharness/apply-preview.json
+```
+
+The preview writes staged generated files under `.autoharness/staging/` and emits a canonical JSON
+manifest. Non-dry-run apply currently exits before writing target files.
+
 ## Provider Diagnostics
 
 ```bash

@@ -8,6 +8,11 @@ from autoharness import __version__
 from autoharness.config import ConfigOverrides, load_config
 from autoharness.doctor import doctor_report
 from autoharness.errors import AutoHarnessError, render_error
+from autoharness.generation import (
+    canonical_apply_preview_json,
+    render_apply_preview,
+    stage_apply_preview,
+)
 from autoharness.logging import configure_logging
 from autoharness.output import ColorMode, OutputFormat, make_console, print_json
 from autoharness.planning import (
@@ -253,6 +258,66 @@ def plan(
             render_plan_summary(console, plan_artifact, artifact_path=artifact_path)
         if plan_artifact.status == "blocked":
             raise typer.Exit(4)
+    except AutoHarnessError as exc:
+        _render_cli_error(exc, output_format=output_format, color=color, verbose=verbose)
+        raise typer.Exit(exc.exit_code) from exc
+
+
+@app.command()
+def apply(
+    plan_artifact: Annotated[
+        Path,
+        typer.Argument(help="Approved AutoHarness plan JSON artifact to preview or apply."),
+    ] = Path(".autoharness/plan.json"),
+    output: Annotated[
+        Path,
+        typer.Option("--output", "-o", help="Path for the canonical JSON apply preview."),
+    ] = Path(".autoharness/apply-preview.json"),
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Stage generated files without writing target files."),
+    ] = False,
+    output_format: Annotated[
+        str | None,
+        typer.Option("--format", help="Output format for this command: human or json."),
+    ] = None,
+    config_path: Annotated[
+        Path | None,
+        typer.Option("--config", help="Path to an AutoHarness YAML configuration file."),
+    ] = None,
+    color: Annotated[
+        str | None,
+        typer.Option("--color", help="Color mode: auto, always, or never."),
+    ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="Show diagnostic context without raw secrets."),
+    ] = False,
+    quiet: Annotated[
+        bool,
+        typer.Option("--quiet", "-q", help="Suppress non-essential human output."),
+    ] = False,
+) -> None:
+    """Preview constrained generation from an approved plan artifact."""
+    try:
+        config = load_config(
+            ConfigOverrides(
+                output_format=output_format,
+                config_path=config_path,
+                color=color,
+            )
+        )
+        console = make_console(color=ColorMode(config.color), quiet=quiet)
+        artifact_path = output if output.is_absolute() else Path.cwd() / output
+        preview = stage_apply_preview(
+            plan_path=plan_artifact,
+            output_path=artifact_path,
+            dry_run=dry_run,
+        )
+        if OutputFormat(config.output_format) is OutputFormat.JSON:
+            console.file.write(canonical_apply_preview_json(preview) + "\n")
+        else:
+            render_apply_preview(console, preview, artifact_path=artifact_path)
     except AutoHarnessError as exc:
         _render_cli_error(exc, output_format=output_format, color=color, verbose=verbose)
         raise typer.Exit(exc.exit_code) from exc

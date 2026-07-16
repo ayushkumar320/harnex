@@ -1,10 +1,10 @@
 # Current Phase
 
-We are building [Phase 3: Findings and planning UX](03-findings-and-planning.md).
+We are building [Phase 4: Constrained generation](04-constrained-generation.md).
 
-Current status: Phase 3 is complete. Phase 4 has not started.
+Current status: Phase 4 is in progress, not complete.
 
-Completed slices:
+Previously completed Phase 3 slices:
 
 - Initial deterministic finding catalog with evidence-cited findings.
 - Scan artifact and human summary include active finding counts, severity counts, and visible
@@ -22,9 +22,25 @@ Completed slices:
 - CI scan examples, fixture precision measurement, Docker gates, and the Phase 3 completion
   record are documented.
 
-Next phase:
+Completed Phase 4 slices:
 
-- [Phase 4: Constrained generation](04-constrained-generation.md), after an explicit decision to
-  begin generation work.
+- Initial `harness apply --dry-run` preview path for explicitly approved direct-provider
+  generation plans.
+- Approved generation plans stage deterministic template output only under `.autoharness/staging`
+  and write a canonical `.autoharness/apply-preview.json` artifact.
+- Phase 4 apply rejects non-dry-run invocation, unapproved actions, unsupported adapters, unsafe
+  paths, stale scan artifacts, and missing generation actions before target writes.
+- Declared output paths with existing symlink components are rejected before staging.
+- AutoHarness-owned `.autoharness` artifact directory creation no longer makes scan freshness
+  stale.
+
+Remaining before Phase 4 completion:
+
+- Interactive confirmation and non-interactive explicit apply flag.
+- Atomic target-file application with transaction journal and rollback.
+- Three-way reapplication preserving compatible user edits and reporting conflicts.
+- Full initial generated artifact set validation against a disposable fixture repo.
+- Special-file/interrupted-write negative tests.
+- Docs, Docker gates, and Phase 4 completion record.
 
 This pointer is intentionally simple. Update it when work moves to the next phase.
