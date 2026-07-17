@@ -94,4 +94,40 @@ Do not claim production-grade isolation beyond tested capabilities. Update secur
 
 ## Phase Completion Record
 
-Not started.
+### 2026-07-17 Initial Sandbox Enforcement Slice
+
+- Added `src/autoharness/sandbox.py` with typed sandbox capability, request, resource, and result
+  schemas plus a `DockerSandboxBackend`.
+- Added a separate `Dockerfile.sandbox` target-execution image. The root AutoHarness application
+  image remains separate from the untrusted target-code execution image.
+- The Docker backend now:
+  - Fails closed when Docker is unavailable or `autoharness-sandbox:dev` is missing.
+  - Mounts target source read-only.
+  - Mounts only approved output and tmp directories as writable.
+  - Denies network with `--network none`.
+  - Runs as UID/GID `65532:65532`.
+  - Drops Linux capabilities and sets `no-new-privileges`.
+  - Applies CPU, memory, PID, and wall-time limits.
+  - Allows only documented environment variables and rejects secret-like names.
+  - Captures bounded, redacted stdout and stderr.
+- `harness doctor` now includes a sandbox capability report alongside provider and web-evidence
+  diagnostics.
+- Added fake-backed negative tests for unavailable Docker, missing sandbox image, writable paths
+  inside source, secret environment variables, redacted hostile output, and timeout handling.
+- Acceptance commands passed:
+  - `docker build -f Dockerfile.sandbox -t autoharness-sandbox:dev .`
+  - Real backend smoke: non-root UID `65532`, source write blocked, network denied, output write
+    succeeded.
+  - `uv run harness doctor --format json`
+  - `uv run ruff check .`
+  - `uv run ruff format --check .`
+  - `uv run mypy src`
+  - `uv run pytest` (109 tests)
+- Known limitations:
+  - This slice provides the backend and doctor integration, not a user-facing `verify` command.
+    Phase 7 wires disposable verification workflows on top of the sandbox.
+  - Resource limits are passed to Docker and timeout behavior is tested; exhaustive CPU, memory,
+    PID, symlink, and mount-boundary escape fixtures should be expanded before alpha.
+  - Host Docker rootless status is not independently proven on Docker Desktop. The container runs
+    as non-root with dropped capabilities and no-new-privileges, and the docs must not claim more
+    than that observed boundary.

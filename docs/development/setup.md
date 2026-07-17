@@ -124,6 +124,21 @@ The repository is mounted read-only and the service drops Linux capabilities. Pr
 
 This Compose service is for the AutoHarness application. It is not the untrusted target-code sandbox specified in Phase 6.
 
+## Docker Sandbox Image
+
+Phase 6 adds a separate target-execution image. Build it independently from the AutoHarness
+application image:
+
+```bash
+docker build -f Dockerfile.sandbox -t autoharness-sandbox:dev .
+uv run harness doctor --format json
+```
+
+The sandbox backend refuses to run when Docker is unavailable or the sandbox image is missing. On a
+supported host it runs target commands with a read-only source mount, approved output/tmp mounts,
+`--network none`, UID/GID `65532:65532`, dropped Linux capabilities, `no-new-privileges`, CPU,
+memory, PID, and wall-time limits, and an environment allowlist.
+
 ## Dependency Policy
 
 - Add a dependency only when the standard library or an existing package does not provide a clear implementation.

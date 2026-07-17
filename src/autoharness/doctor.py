@@ -7,6 +7,7 @@ from typing import Any
 
 from autoharness.config import AppConfig
 from autoharness.providers import ProviderKind, ProviderLocality
+from autoharness.sandbox import default_sandbox_report
 
 
 def doctor_report(config: AppConfig) -> dict[str, Any]:
@@ -49,6 +50,7 @@ def doctor_report(config: AppConfig) -> dict[str, Any]:
                 else "missing_credentials"
             ),
         },
+        "sandbox": default_sandbox_report().model_dump(mode="json"),
     }
 
 

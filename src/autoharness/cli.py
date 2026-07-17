@@ -425,6 +425,12 @@ def doctor(
                 f"Web evidence: {'enabled' if web['enabled'] else 'disabled'} "
                 f"({web['provider']}), credits: {web['max_credits_per_command']}"
             )
+            sandbox = report["sandbox"]
+            console.print(f"Sandbox backend: {sandbox['backend']} ({sandbox['status']})")
+            for capability in sandbox["capabilities"]:
+                console.print(
+                    f"- {capability['name']}: {capability['status']} ({capability['evidence']})"
+                )
     except AutoHarnessError as exc:
         _render_cli_error(exc, output_format=output_format, color=color, verbose=verbose)
         raise typer.Exit(exc.exit_code) from exc

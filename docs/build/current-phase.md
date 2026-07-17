@@ -1,9 +1,11 @@
 # Current Phase
 
-We are building [Phase 5: Runtime reliability](05-runtime-reliability.md).
+We are building [Phase 6: Sandbox enforcement](06-sandbox-enforcement.md).
 
-Current status: Phase 4 is complete. Phase 5 implementation is complete; Docker acceptance
-gates are pending because the local Docker daemon was unavailable.
+Current status: Phase 5 is complete. Phase 6 has its first sandbox enforcement slice implemented:
+typed sandbox contracts, a separate Docker target-execution image, fail-closed Docker/image probes,
+doctor reporting, fake-backed negative tests, and a real Docker smoke for read-only source,
+approved output writes, denied network, and non-root execution.
 
 Previously completed Phase 3 slices:
 
@@ -44,23 +46,22 @@ Completed Phase 4 slices:
 - AutoHarness-owned `.autoharness` artifact directory creation no longer makes scan freshness
   stale.
 
-Current Phase 5 slices:
+Current Phase 6 slices:
 
-- Added the initial runtime reliability core with versioned runtime events, redacted JSONL
-  writing, normalized runtime failure kinds, side-effect classifications, an attempt ledger, and
-  a deterministic retry executor.
-- Added fault-injection tests for unsafe side-effect retry blocking, timeout after fake commit,
-  bounded rate-limit retries, idempotency-key policy blocking, seeded jitter, logger write
-  failure, hostile content, and default prompt/secret redaction.
-- Added compact malformed-output correction packets before side effects, cancellation handling,
-  human failure summaries, and generated direct-provider runtime adapters that run against fake
-  providers.
-- Generated runtime tests now exercise rate-limit retry behavior and malformed-output correction
-  packets after applying the approved direct-provider plan.
+- Added `DockerSandboxBackend` with read-only source mount, approved writable output/tmp mounts,
+  `--network none`, UID/GID `65532:65532`, dropped capabilities, `no-new-privileges`, CPU, memory,
+  PID, and wall-time limits, redacted output capture, and environment allowlisting.
+- Added `Dockerfile.sandbox` and `harness doctor` sandbox capability reporting.
+- Added fake-backed negative tests for unavailable Docker, missing sandbox image, unsafe writable
+  paths, secret environment variables, hostile output redaction, and timeout handling.
+- Real Docker smoke passed on 2026-07-17: UID `65532`, source write blocked, network denied, and
+  approved output write succeeded.
 
-Remaining Phase 5 gate:
+Remaining Phase 6 work before full completion:
 
-- Run `docker build -t autoharness:dev .` and `docker run --rm autoharness:dev --help` after the
-  Docker daemon is available, then append the final Phase 5 completion record.
+- Expand real or fake conformance fixtures for CPU, memory, PID, symlink, traversal, and
+  mount-boundary escape cases.
+- Decide whether Phase 6 should expose a dedicated sandbox smoke command or leave execution solely
+  to Phase 7 verification workflows.
 
 This pointer is intentionally simple. Update it when work moves to the next phase.

@@ -152,3 +152,23 @@ providers, and the final Phase 5 completion record.
 
 Still pending before the final Phase 5 completion record: rerun the Docker build and
 `docker run --rm autoharness:dev --help` after Docker is available.
+
+### 2026-07-17 Phase 5 Completion
+
+- Re-ran the full local quality gate after the Docker daemon became available.
+- Confirmed the AutoHarness application image builds and starts as a non-root CLI package image.
+- Acceptance commands passed:
+  - `uv run ruff check .`
+  - `uv run ruff format --check .`
+  - `uv run mypy src`
+  - `uv run pytest` (102 tests)
+  - `docker build -t autoharness:dev .`
+  - `docker run --rm autoharness:dev --help`
+- Known limitations:
+  - Runtime reliability covers the generated direct-provider fixture and deterministic fake
+    providers. Broader framework adapters remain later-phase work.
+  - Runtime events and retry policy are not a sandbox boundary; Phase 6 adds capability-tested
+    containment for constrained execution.
+- Deferred decisions:
+  - Production observability exporters, workflow checkpointing, and live semantic evals remain
+    out of scope until later phases.

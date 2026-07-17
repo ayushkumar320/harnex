@@ -112,6 +112,14 @@ The MVP sandbox uses a dedicated rootless Docker execution backend with:
 
 Command-name deny lists are only defense in depth. They do not prevent interpreter, child-process, alias, encoding, or path-based bypasses.
 
+Phase 6 currently implements the first Docker backend contract in `src/autoharness/sandbox.py` and
+a separate `Dockerfile.sandbox` target-execution image. `harness doctor` reports the Docker daemon,
+the local sandbox image, mount policy, network denial, non-root user, dropped capabilities,
+`no-new-privileges`, resource limits, and environment allowlisting. The backend fails closed when
+the daemon or image is unavailable, when writable mounts are inside the source tree, or when
+secret-like environment variables are requested. Capability evidence must remain tied to observed
+backend behavior or explicit Docker flags; do not broaden the claim to arbitrary host isolation.
+
 Path tests must cover traversal, absolute paths, symlinks, mount boundaries, case behavior, and time-of-check/time-of-use assumptions. If Docker cannot enforce a declared capability on the host platform, verification fails closed.
 
 The AutoHarness application container in the root `Dockerfile` is not the target-code sandbox.
