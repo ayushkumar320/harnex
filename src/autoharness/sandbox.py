@@ -399,13 +399,15 @@ def _validate_request_paths(request: SandboxRequest) -> None:
     source = _normalized_existing_dir(request.source_root)
     output = _normalized_dir(request.output_dir)
     tmp_dir = _normalized_dir(request.tmp_dir) if request.tmp_dir else None
-    if output == source or source in output.parents:
+    if _is_same_or_within(output, source) or _declared_inside_source(request.output_dir, source):
         raise _sandbox_blocked(
             "AH-S003",
             "Sandbox output directory cannot be inside the read-only source tree.",
             "Choose an output directory outside the target repository snapshot.",
         )
-    if tmp_dir is not None and (tmp_dir == source or source in tmp_dir.parents):
+    if tmp_dir is not None and (
+        _is_same_or_within(tmp_dir, source) or _declared_inside_source(request.tmp_dir, source)
+    ):
         raise _sandbox_blocked(
             "AH-S004",
             "Sandbox tmp directory cannot be inside the read-only source tree.",
@@ -448,6 +450,29 @@ def _normalized_dir(path: Path | None) -> Path:
             "Sandbox writable path could not be resolved.",
             "Use a normal filesystem directory without traversal or broken symlink components.",
         ) from exc
+
+
+def _is_same_or_within(path: Path, parent: Path) -> bool:
+    return path == parent or parent in path.parents
+
+
+def _declared_inside_source(path: Path | None, source: Path) -> bool:
+    if path is None:
+        return False
+    absolute = path.expanduser()
+    if not absolute.is_absolute():
+        absolute = Path.cwd() / absolute
+    normalized_parts: list[str] = []
+    for part in absolute.parts:
+        if part in {"", "."}:
+            continue
+        if part == "..":
+            if normalized_parts:
+                normalized_parts.pop()
+            continue
+        normalized_parts.append(part)
+    declared = Path(*normalized_parts)
+    return declared == source or source in declared.parents
 
 
 def _validated_environment(env: Mapping[str, str]) -> dict[str, str]:

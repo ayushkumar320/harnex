@@ -90,6 +90,30 @@ manifest. Confirmed apply writes approved generated files, records a transaction
 write fails. Reapply preserves append-only edits after the generated base and stops with a
 conflict when edits are made inside the generated base region.
 
+## Verification Smoke
+
+Build the sandbox image before running sandbox-backed verification:
+
+```bash
+docker build -f Dockerfile.sandbox -t autoharness-sandbox:dev .
+uv run harness verify . --output .autoharness/verify.json
+uv run harness verify . --format json --output .autoharness/verify.json
+```
+
+Verification uses a disposable workspace, fixture runtime failures, denied-network sandbox checks,
+and draft-only semantic evals. The command may write the requested verification report artifact,
+but it hashes the original repository before and after the verification checks.
+
+## Alpha Benchmark
+
+```bash
+uv run harness benchmark --output docs/benchmark/alpha-results.json
+uv run harness benchmark --format json --output docs/benchmark/alpha-results.json
+```
+
+The benchmark uses `docs/benchmark/alpha-corpus.json` and does not call live model providers.
+Public alpha claims must cite the measured `docs/benchmark/alpha-results.json` artifact.
+
 ## Provider Diagnostics
 
 ```bash

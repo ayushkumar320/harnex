@@ -159,6 +159,65 @@ def test_sandbox_rejects_writable_paths_inside_source(
     assert error.value.code == "AH-S003"
 
 
+def test_sandbox_rejects_declared_symlink_writable_path_inside_source(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("autoharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
+    source = tmp_path / "source"
+    outside = tmp_path / "outside"
+    source.mkdir()
+    outside.mkdir()
+    link = source / "link-out"
+    try:
+        link.symlink_to(outside, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"symlink creation unsupported: {exc}")
+    runner = FakeRunner(
+        [
+            FakeCompleted(returncode=0, stdout="25.0.0\n"),
+            FakeCompleted(returncode=0, stdout="[]"),
+        ]
+    )
+
+    with pytest.raises(AutoHarnessError) as error:
+        DockerSandboxBackend(runner=runner).run(
+            SandboxRequest(
+                source_root=source,
+                output_dir=link / "out",
+                command=["python", "-c", "print('blocked')"],
+            )
+        )
+
+    assert error.value.code == "AH-S003"
+
+
+def test_sandbox_rejects_traversal_back_into_source(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("autoharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
+    source = tmp_path / "source"
+    source.mkdir()
+    runner = FakeRunner(
+        [
+            FakeCompleted(returncode=0, stdout="25.0.0\n"),
+            FakeCompleted(returncode=0, stdout="[]"),
+        ]
+    )
+
+    with pytest.raises(AutoHarnessError) as error:
+        DockerSandboxBackend(runner=runner).run(
+            SandboxRequest(
+                source_root=source,
+                output_dir=source / ".." / "source" / "out",
+                command=["python", "-c", "print('blocked')"],
+            )
+        )
+
+    assert error.value.code == "AH-S003"
+
+
 def test_sandbox_rejects_secret_environment(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

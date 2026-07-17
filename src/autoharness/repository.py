@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 from pathlib import Path
 
 import pathspec
@@ -26,6 +27,7 @@ DEFAULT_EXCLUDED_DIRS = {
     "__pycache__",
     "node_modules",
 }
+SECRET_VALUE_PATTERN = re.compile(r"sk-[A-Za-z0-9_-]{8,}")
 
 SECRET_NAMES = {
     ".env",
@@ -212,7 +214,9 @@ def _looks_secret_content(sample: bytes) -> bool:
         "HF_TOKEN=",
         "AWS_SECRET_ACCESS_KEY=",
     )
-    return any(marker in text for marker in markers)
+    return (
+        any(marker in text for marker in markers) or SECRET_VALUE_PATTERN.search(text) is not None
+    )
 
 
 def _language_for(path: Path) -> str:

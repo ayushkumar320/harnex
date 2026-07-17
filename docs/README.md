@@ -19,6 +19,7 @@ This directory is the source of truth for product intent, architecture, developm
 - [Product vision](product/vision.md): problem, differentiation, principles, and long-term direction
 - [User experience](product/user-experience.md): workflows, emotions, CLI behavior, and failure communication
 - [Scope and metrics](product/scope.md): support tiers, MVP boundaries, non-goals, and measurable success
+- [Alpha support matrix](product/support-matrix.md): supported versions, backend claims, and known limits
 
 ## Architecture
 
@@ -30,6 +31,7 @@ This directory is the source of truth for product intent, architecture, developm
 ## Development
 
 - [Local and Docker setup](development/setup.md): UV, requirements, environment variables, quality checks, and containers
+- [Startup and package release guide](development/startup-and-release.md): local startup, package builds, TestPyPI/PyPI, and container release
 - [CI usage](development/ci.md): read-only scan gates, artifact upload examples, and fixture precision snapshot
 
 ## Build

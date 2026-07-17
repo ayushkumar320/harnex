@@ -98,4 +98,37 @@ Run the complete suite and reproducible builds. Update all public documentation 
 
 ## Phase Completion Record
 
-Not started.
+### 2026-07-17 Phase 8 Completion
+
+- Added a 10-case labeled alpha corpus at `docs/benchmark/alpha-corpus.json`.
+- Added fixture repositories under `tests/fixtures/benchmark/` covering direct provider calls,
+  shell/process effects, filesystem writes, dynamic lookup, broad retry, prompt-injection prose,
+  secret-like documentation, and syntax errors.
+- Added `src/autoharness/benchmark.py` and `harness benchmark` with versioned JSON and human
+  summaries.
+- Added `docs/benchmark/alpha-results.json` with measured results.
+- Added public alpha docs:
+  - `README.md` updated for scan/plan/apply/verify/benchmark/doctor.
+  - `CHANGELOG.md`
+  - `SECURITY.md`
+  - `docs/product/support-matrix.md`
+- Added deterministic secret-content detection for `sk-...` token-shaped values in repository
+  inventory.
+- Alpha benchmark result:
+  - Cases: 10
+  - Held-out cases: 5
+  - Count precision/recall: 1.00 / 1.00
+  - Finding precision/recall: 1.00 / 1.00
+  - Parse-failure accuracy: 1.00
+  - Alpha decision: `go` for the documented narrow support matrix.
+- Acceptance commands passed:
+  - `uv run harness benchmark --format json --output docs/benchmark/alpha-results.json`
+  - `uv run pytest tests/test_benchmark.py`
+  - `docker build -t autoharness:dev .`
+  - `docker run --rm autoharness:dev --help`
+- Known limitations:
+  - Benchmark fixtures are purpose-built and small; broader public-repository benchmarking remains
+    future work.
+  - Live provider fallback remains contract-tested with fakes by default, not live credentials.
+  - SBOM generation and registry publishing are documented as release-owner work, not performed in
+    this local phase run.

@@ -131,3 +131,30 @@ Do not claim production-grade isolation beyond tested capabilities. Update secur
   - Host Docker rootless status is not independently proven on Docker Desktop. The container runs
     as non-root with dropped capabilities and no-new-privileges, and the docs must not claim more
     than that observed boundary.
+
+### 2026-07-17 Phase 6 Completion
+
+- Tightened sandbox writable-path validation to reject paths declared inside the source tree even
+  when symlink resolution would point outside the tree.
+- Added negative tests for symlink and `..` writable-path attempts, missing Docker, missing sandbox
+  image, secret-like environment variables, redacted captured output, and timeout handling.
+- Phase 7 `harness verify` now exercises the real Docker backend smoke: source write blocked,
+  network denied, UID `65532`, and approved output write succeeded.
+- Acceptance commands passed:
+  - `docker build -f Dockerfile.sandbox -t autoharness-sandbox:dev .`
+  - `uv run harness doctor --format json`
+  - `uv run harness verify . --format json --output .autoharness/verify.json`
+  - `uv run pytest tests/test_sandbox.py tests/test_verification.py`
+- Capability matrix:
+  - `docker_daemon`: supported on the tested Docker Desktop host.
+  - `sandbox_image`: supported after building `autoharness-sandbox:dev`.
+  - `read_only_source_mount`: supported by Docker bind mount and verified by write denial.
+  - `approved_writable_mounts`: supported by explicit output/tmp mounts and verified output write.
+  - `network_denied`: supported by `--network none` and verified socket failure.
+  - `non_root_user`: supported and verified as UID/GID `65532`.
+  - `linux_capabilities_dropped`: requested with `--cap-drop ALL` and
+    `--security-opt no-new-privileges`.
+  - `resource_limits`: requested with CPU, memory, PID, and wall-time limits; timeout behavior is
+    tested by fakes.
+- Remaining non-alpha limitation: Docker Desktop rootless internals are not independently proven.
+  AutoHarness claims only the tested container policy and observed smoke behavior.

@@ -4,7 +4,7 @@ AutoHarness audits AI agent repositories for reliability and safety gaps, then g
 
 Most agent projects eventually need the same supporting infrastructure: bounded retries, structured logs, side-effect controls, sandboxing, and regression checks. AutoHarness makes those gaps visible before it tries to change anything.
 
-> **Project status:** design and bootstrap stage. The CLI shell and development environment exist; scanner and generation behavior are delivered phase by phase under [`docs/build/`](docs/build/README.md).
+> **Project status:** public-alpha candidate. The current implementation supports a narrow Python 3.12 static-audit workflow, constrained direct-provider generation, runtime reliability fixtures, Docker-backed sandbox smoke verification, deterministic `harness verify`, and a labeled alpha benchmark corpus. Unsupported behavior is reported rather than silently transformed.
 
 ## Product Principle
 
@@ -19,6 +19,7 @@ Target repository
     -> reviewed plan for supported patterns
     -> constrained generation
     -> isolated verification
+    -> measured alpha benchmark
 ```
 
 ## Intended Workflow
@@ -26,71 +27,38 @@ Target repository
 ```bash
 harness scan .
 harness plan .
-harness apply .
+harness apply . --dry-run
+harness apply . --yes
 harness verify .
-harness doctor .
+harness benchmark
+harness doctor
 ```
 
 | Command | Responsibility |
 | --- | --- |
 | `scan` | Read-only analysis with source evidence and confidence |
 | `plan` | Proposed policies, files, dependencies, and unresolved decisions |
-| `apply` | Apply an approved, reviewable diff |
-| `verify` | Run deterministic checks in an isolated environment |
-| `doctor` | Report provider, sandbox, runtime, and configuration drift |
-
-Example scan summary:
-
-```text
-Entrypoint: agent/main.py:run_agent        confidence: 96%
-Model calls: 3 detected
-External side effects: 2 detected
-Unsafe retry boundary: agent/email.py:42
-Missing structured logging: 3 call sites
-Sandbox coverage: incomplete
-Generated fixes available: 4
-Manual decisions required: 2
-```
+| `apply` | Preview or apply an approved, reviewable generated diff |
+| `verify` | Run deterministic checks in a disposable workspace with denied-network sandbox checks |
+| `benchmark` | Measure the labeled alpha fixture corpus without live provider calls |
+| `doctor` | Report provider, web-evidence, sandbox, and configuration readiness |
 
 ## Initial Scope
 
-The first credible release is intentionally narrow:
+The alpha support claim is intentionally narrow:
 
 - Python 3.12 repositories
-- CLI and single-function entry points
-- Direct OpenAI-compatible, Groq, and Hugging Face model calls
-- One LangGraph entry-point adapter after direct providers are stable
-- Shell and filesystem tool detection
-- JSONL reporting and logs
+- Static scan without importing target modules
+- CLI and single-function entry-point evidence
+- Direct OpenAI-compatible, Groq, and Hugging Face model-call patterns
+- Shell/process and filesystem-write side-effect detection
+- JSON scan, plan, apply, verify, and benchmark artifacts
+- Deterministic JSONL runtime logging templates
 - Provider-call retries before external side effects
-- One enforceable Docker sandbox backend
-- Deterministic smoke tests and fault injection
+- One Docker sandbox backend using a separate target-execution image
+- Fixture-driven verification and benchmark reporting
 
 AutoHarness will report unsupported patterns instead of silently generating code for them.
-
-## Free-First Model and Web-Evidence Strategy
-
-AutoHarness is LLM-core for repository interpretation, findings, planning, and repository-specific generation. Static scanning, evidence collection, schema validation, permission checks, and sandbox enforcement remain deterministic guardrails around that reasoning core.
-
-Model assistance uses an ordered, user-approved route rather than a hard-coded Groq primary.
-A route may combine local OpenAI-compatible, Groq, and Hugging Face entries. Each attempt and
-the complete operation have bounded deadlines; transient failures receive limited retry,
-then the router moves to the next eligible provider without weakening the data policy.
-
-When every configured model is unavailable, a structural inventory still completes, but it
-is clearly labeled as incomplete rather than presented as a full AutoHarness audit. No remote
-system can promise zero timeouts; AutoHarness instead guarantees bounded waiting, visible
-fallback provenance, and no dependency on Groq alone.
-
-The first provider adapters target:
-
-- [Hugging Face Inference](https://huggingface.co/docs/huggingface_hub/en/guides/inference)
-- [Groq's OpenAI-compatible API](https://console.groq.com/docs/openai)
-- Configurable OpenAI-compatible local or hosted endpoints
-
-Optional [Tavily](https://docs.tavily.com/) integration supplies current official SDK documentation, migration guidance, provider capabilities, and source-backed troubleshooting context to the LLM. Tavily is explicit, budgeted, cached, and never receives private source code by default.
-
-Free tiers, quotas, and available models change. AutoHarness therefore discovers provider capability at runtime and never assumes that a particular free model is permanently available.
 
 ## Development Setup
 
@@ -101,7 +69,7 @@ uv sync --all-extras --locked
 uv run harness --help
 ```
 
-Run the first read-only scanner:
+Run the read-only scanner:
 
 ```bash
 uv run harness scan . --output .autoharness/scan.json
@@ -109,33 +77,54 @@ uv run harness scan . --format json --output .autoharness/scan.json
 uv run harness scan . --output .autoharness/scan.json --fail-on high
 ```
 
-`scan` parses Python files as data. It does not import target modules, run setup hooks, execute
-tests, or call model providers.
+`scan` parses Python files as data. It does not import target modules, run setup hooks, execute tests, or call model providers.
 
-Inspect provider and web-evidence configuration without sending repository evidence:
+Inspect provider, web-evidence, and sandbox configuration without sending repository evidence:
 
 ```bash
 uv run harness doctor
+uv run harness doctor --format json
 ```
 
-Copy `.env.example` to `.env` only when testing model-assisted behavior. A read-only scan must not require provider credentials.
+Build the target-execution sandbox image before sandbox-backed verification:
+
+```bash
+docker build -f Dockerfile.sandbox -t autoharness-sandbox:dev .
+uv run harness verify . --output .autoharness/verify.json
+```
+
+Run the alpha benchmark:
+
+```bash
+uv run harness benchmark --output docs/benchmark/alpha-results.json
+```
+
+Copy `.env.example` to `.env` only when testing model-assisted behavior. A read-only scan and the default benchmark do not require provider credentials.
+
+For packaging and deployment, see the [startup and package release guide](docs/development/startup-and-release.md).
 
 ## Docker
 
-Build and inspect the CLI bootstrap:
+Build and inspect the CLI application image:
 
 ```bash
-docker build -t autoharness:phase-0 .
-docker run --rm autoharness:phase-0 --version
+docker build -t autoharness:dev .
+docker run --rm autoharness:dev --version
 ```
 
-Or use Compose:
+Build the separate sandbox image:
 
 ```bash
-docker compose run --rm autoharness --help
+docker build -f Dockerfile.sandbox -t autoharness-sandbox:dev .
 ```
 
-The application image is not the sandbox backend. The sandbox backend uses a separate, restricted execution contract introduced in the sandbox phase.
+The application image is not the sandbox backend. The sandbox backend uses the separate target-execution image and fails closed when Docker or the image is unavailable.
+
+## Alpha Benchmark
+
+The checked-in alpha corpus lives at [`docs/benchmark/alpha-corpus.json`](docs/benchmark/alpha-corpus.json). It includes 10 fixture repositories, including held-out cases for dynamic lookup, broad retry, prompt injection prose, secret-like documentation, and syntax errors.
+
+The benchmark distinguishes static detection metrics from generation and verification success. It does not run live model providers and does not score semantic correctness.
 
 ## Documentation
 
@@ -155,7 +144,7 @@ The application image is not the sandbox backend. The sandbox backend uses a sep
 
 ## Safety Position
 
-AutoHarness is not proof that an agent is production-safe. Static analysis can miss dynamic behavior, model output is untrusted, retries can duplicate side effects, and a policy file is not a sandbox. Findings always carry evidence, confidence, and a support tier: `supported`, `detected`, or `unsupported`.
+AutoHarness is not proof that an agent is production-safe. Static analysis can miss dynamic behavior, model output is untrusted, retries can duplicate side effects, and a policy file is not a sandbox. Findings carry evidence, confidence, support tier, and generation state. Verification reports separate `passed`, `failed`, `not_exercised`, and `requires_approval`.
 
 ## License
 

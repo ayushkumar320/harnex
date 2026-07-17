@@ -5,6 +5,12 @@ import typer
 from pydantic import ValidationError
 
 from autoharness import __version__
+from autoharness.benchmark import (
+    canonical_benchmark_json,
+    render_benchmark_summary,
+    run_benchmark,
+    write_benchmark_report,
+)
 from autoharness.config import ConfigOverrides, load_config
 from autoharness.doctor import doctor_report
 from autoharness.errors import AutoHarnessError, ErrorContext, render_error
@@ -25,6 +31,12 @@ from autoharness.planning import (
 )
 from autoharness.reporter import canonical_json, render_human_summary, write_report
 from autoharness.scan import scan_repository
+from autoharness.verification import (
+    canonical_verification_json,
+    render_verification_summary,
+    verify_repository,
+    write_verification_report,
+)
 
 app = typer.Typer(
     name="harness",
@@ -365,6 +377,123 @@ def apply(
             console.file.write(canonical_apply_preview_json(preview) + "\n")
         else:
             render_apply_preview(console, preview, artifact_path=artifact_path)
+    except AutoHarnessError as exc:
+        _render_cli_error(exc, output_format=output_format, color=color, verbose=verbose)
+        raise typer.Exit(exc.exit_code) from exc
+
+
+@app.command()
+def verify(
+    path: Annotated[
+        Path,
+        typer.Argument(help="Repository directory to verify in a disposable workspace."),
+    ] = Path("."),
+    output: Annotated[
+        Path,
+        typer.Option("--output", "-o", help="Path for the canonical JSON verification report."),
+    ] = Path(".autoharness/verify.json"),
+    keep_workspace: Annotated[
+        bool,
+        typer.Option(
+            "--keep-workspace",
+            help="Retain the disposable verification workspace for debugging.",
+        ),
+    ] = False,
+    output_format: Annotated[
+        str | None,
+        typer.Option("--format", help="Output format for this command: human or json."),
+    ] = None,
+    config_path: Annotated[
+        Path | None,
+        typer.Option("--config", help="Path to an AutoHarness YAML configuration file."),
+    ] = None,
+    color: Annotated[
+        str | None,
+        typer.Option("--color", help="Color mode: auto, always, or never."),
+    ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="Show diagnostic context without raw secrets."),
+    ] = False,
+    quiet: Annotated[
+        bool,
+        typer.Option("--quiet", "-q", help="Suppress non-essential human output."),
+    ] = False,
+) -> None:
+    """Run deterministic verification checks in a disposable environment."""
+    try:
+        config = load_config(
+            ConfigOverrides(
+                output_format=output_format,
+                config_path=config_path,
+                color=color,
+            )
+        )
+        console = make_console(color=ColorMode(config.color), quiet=quiet)
+        artifact_path = output if output.is_absolute() else Path.cwd() / output
+        report = verify_repository(path, keep_workspace=keep_workspace)
+        write_verification_report(artifact_path, report)
+        if OutputFormat(config.output_format) is OutputFormat.JSON:
+            console.file.write(canonical_verification_json(report) + "\n")
+        else:
+            render_verification_summary(console, report, artifact_path=artifact_path)
+        if report.summary.get("failed", 0) > 0:
+            raise typer.Exit(5)
+    except AutoHarnessError as exc:
+        _render_cli_error(exc, output_format=output_format, color=color, verbose=verbose)
+        raise typer.Exit(exc.exit_code) from exc
+
+
+@app.command()
+def benchmark(
+    corpus: Annotated[
+        Path,
+        typer.Argument(help="Benchmark corpus JSON to run."),
+    ] = Path("docs/benchmark/alpha-corpus.json"),
+    output: Annotated[
+        Path,
+        typer.Option("--output", "-o", help="Path for the canonical JSON benchmark report."),
+    ] = Path(".autoharness/benchmark.json"),
+    output_format: Annotated[
+        str | None,
+        typer.Option("--format", help="Output format for this command: human or json."),
+    ] = None,
+    config_path: Annotated[
+        Path | None,
+        typer.Option("--config", help="Path to an AutoHarness YAML configuration file."),
+    ] = None,
+    color: Annotated[
+        str | None,
+        typer.Option("--color", help="Color mode: auto, always, or never."),
+    ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="Show diagnostic context without raw secrets."),
+    ] = False,
+    quiet: Annotated[
+        bool,
+        typer.Option("--quiet", "-q", help="Suppress non-essential human output."),
+    ] = False,
+) -> None:
+    """Run the labeled alpha benchmark corpus without live provider calls."""
+    try:
+        config = load_config(
+            ConfigOverrides(
+                output_format=output_format,
+                config_path=config_path,
+                color=color,
+            )
+        )
+        console = make_console(color=ColorMode(config.color), quiet=quiet)
+        artifact_path = output if output.is_absolute() else Path.cwd() / output
+        report = run_benchmark(corpus)
+        write_benchmark_report(artifact_path, report)
+        if OutputFormat(config.output_format) is OutputFormat.JSON:
+            console.file.write(canonical_benchmark_json(report) + "\n")
+        else:
+            render_benchmark_summary(console, report, artifact_path=artifact_path)
+        if report.alpha_decision == "blocked":
+            raise typer.Exit(1)
     except AutoHarnessError as exc:
         _render_cli_error(exc, output_format=output_format, color=color, verbose=verbose)
         raise typer.Exit(exc.exit_code) from exc

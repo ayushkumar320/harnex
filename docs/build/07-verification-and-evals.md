@@ -98,4 +98,30 @@ Run all gates and update README examples to match real output. Append the comple
 
 ## Phase Completion Record
 
-Not started.
+### 2026-07-17 Phase 7 Completion
+
+- Added `src/autoharness/verification.py` with versioned `VerificationCheck`,
+  `VerificationReport`, and draft semantic eval schemas.
+- Added `harness verify` with human and JSON output.
+- Verification creates a disposable workspace, hashes the original tree before and after checks,
+  uses fake runtime/provider failures, and removes the workspace by default.
+- Deterministic checks now cover:
+  - Scan artifact freshness when `.autoharness/scan.json` is present.
+  - Generated Python compile/importability when generated files are present.
+  - Bounded runtime retry and runtime JSONL redaction.
+  - Timeout after a fake committed unknown side effect without duplicate retry.
+  - Docker sandbox containment smoke with denied network, read-only source, approved output, and
+    non-root UID.
+  - Draft semantic eval candidate generation with `requires_approval` status.
+- Added tests for successful verification reports, CLI JSON parity, failed sandbox capability, and
+  non-mutation of the original tree.
+- Acceptance commands passed:
+  - `uv run pytest tests/test_verification.py`
+  - `docker build -f Dockerfile.sandbox -t autoharness-sandbox:dev .`
+  - `uv run harness verify . --format json --output .autoharness/verify.json`
+- Exact current verification claims:
+  - Runtime retry/redaction and duplicate-side-effect blocking are exercised through fakes.
+  - Sandbox containment is exercised through the Docker backend smoke.
+  - Semantic evals are draft-only and require developer-approved oracles.
+  - Scan freshness and generated-file importability are reported as `not_exercised` when their
+    artifacts are absent.

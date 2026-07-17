@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "benchmark_corpus",
+  "cases": [
+    {
+      "id": "direct_openai",
+      "path": "tests/fixtures/benchmark/direct_openai",
+      "held_out": false,
+      "expected": {"model_call_candidates": 1, "side_effect_candidates": 0, "unknown_dynamic_patterns": 0, "parse_failures": 0, "finding_rules": ["AH-R101"]}
+    },
+    {
+      "id": "groq_direct",
+      "path": "tests/fixtures/benchmark/groq_direct",
+      "held_out": false,
+      "expected": {"model_call_candidates": 1, "side_effect_candidates": 0, "unknown_dynamic_patterns": 0, "parse_failures": 0, "finding_rules": ["AH-R101"]}
+    },
+    {
+      "id": "hf_inference",
+      "path": "tests/fixtures/benchmark/hf_inference",
+      "held_out": false,
+      "expected": {"model_call_candidates": 1, "side_effect_candidates": 0, "unknown_dynamic_patterns": 0, "parse_failures": 0, "finding_rules": ["AH-R101"]}
+    },
+    {
+      "id": "shell_tool",
+      "path": "tests/fixtures/benchmark/shell_tool",
+      "held_out": false,
+      "expected": {"model_call_candidates": 0, "side_effect_candidates": 1, "unknown_dynamic_patterns": 0, "parse_failures": 0, "finding_rules": ["AH-S101"]}
+    },
+    {
+      "id": "filesystem_write",
+      "path": "tests/fixtures/benchmark/filesystem_write",
+      "held_out": false,
+      "expected": {"model_call_candidates": 0, "side_effect_candidates": 1, "unknown_dynamic_patterns": 0, "parse_failures": 0, "finding_rules": ["AH-S101"]}
+    },
+    {
+      "id": "dynamic_unknown",
+      "path": "tests/fixtures/benchmark/dynamic_unknown",
+      "held_out": true,
+      "expected": {"model_call_candidates": 0, "side_effect_candidates": 0, "unknown_dynamic_patterns": 2, "parse_failures": 0, "finding_rules": ["AH-U101", "AH-U101"]}
+    },
+    {
+      "id": "broad_retry",
+      "path": "tests/fixtures/benchmark/broad_retry",
+      "held_out": true,
+      "expected": {"model_call_candidates": 2, "side_effect_candidates": 0, "unknown_dynamic_patterns": 0, "parse_failures": 0, "finding_rules": ["AH-R101", "AH-R101", "AH-R102"]}
+    },
+    {
+      "id": "prompt_injection",
+      "path": "tests/fixtures/benchmark/prompt_injection",
+      "held_out": true,
+      "expected": {"model_call_candidates": 0, "side_effect_candidates": 0, "unknown_dynamic_patterns": 0, "parse_failures": 0, "finding_rules": []}
+    },
+    {
+      "id": "secret_doc",
+      "path": "tests/fixtures/benchmark/secret_doc",
+      "held_out": true,
+      "expected": {"model_call_candidates": 0, "side_effect_candidates": 0, "unknown_dynamic_patterns": 0, "parse_failures": 0, "finding_rules": ["AH-S201"]}
+    },
+    {
+      "id": "syntax_error",
+      "path": "tests/fixtures/benchmark/syntax_error",
+      "held_out": true,
+      "expected": {"model_call_candidates": 0, "side_effect_candidates": 0, "unknown_dynamic_patterns": 0, "parse_failures": 1, "finding_rules": []}
+    }
+  ]
+}

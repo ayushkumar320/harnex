@@ -1,11 +1,10 @@
 # Current Phase
 
-We are building [Phase 6: Sandbox enforcement](06-sandbox-enforcement.md).
+All baseline build phases through [Phase 8: Benchmark and alpha](08-benchmark-and-alpha.md) are complete.
 
-Current status: Phase 5 is complete. Phase 6 has its first sandbox enforcement slice implemented:
-typed sandbox contracts, a separate Docker target-execution image, fail-closed Docker/image probes,
-doctor reporting, fake-backed negative tests, and a real Docker smoke for read-only source,
-approved output writes, denied network, and non-root execution.
+Current status: Phase 8 completed on 2026-07-17 with a narrow public-alpha `go` decision backed by
+the checked-in fixture benchmark. Future work should move to `docs/nextplans/` or explicitly open a
+new post-alpha phase.
 
 Previously completed Phase 3 slices:
 
@@ -46,7 +45,7 @@ Completed Phase 4 slices:
 - AutoHarness-owned `.autoharness` artifact directory creation no longer makes scan freshness
   stale.
 
-Current Phase 6 slices:
+Completed Phase 6 slices:
 
 - Added `DockerSandboxBackend` with read-only source mount, approved writable output/tmp mounts,
   `--network none`, UID/GID `65532:65532`, dropped capabilities, `no-new-privileges`, CPU, memory,
@@ -57,11 +56,15 @@ Current Phase 6 slices:
 - Real Docker smoke passed on 2026-07-17: UID `65532`, source write blocked, network denied, and
   approved output write succeeded.
 
-Remaining Phase 6 work before full completion:
+Completed Phase 7 slices:
 
-- Expand real or fake conformance fixtures for CPU, memory, PID, symlink, traversal, and
-  mount-boundary escape cases.
-- Decide whether Phase 6 should expose a dedicated sandbox smoke command or leave execution solely
-  to Phase 7 verification workflows.
+- Added `harness verify`, versioned verification reports, fake runtime fault checks, Docker
+  sandbox smoke verification, draft semantic evals, and cleanup/non-mutation tests.
+
+Completed Phase 8 slices:
+
+- Added `harness benchmark`, a 10-case alpha corpus with 5 held-out cases, measured
+  `docs/benchmark/alpha-results.json`, README/CHANGELOG/SECURITY/support-matrix updates, and a
+  narrow alpha `go` decision.
 
 This pointer is intentionally simple. Update it when work moves to the next phase.
