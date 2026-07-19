@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Made apply rollback restore existing generated targets and generated-base snapshots.
+- Enforced provider attempt deadlines for synchronous SDK clients without blocking the async router.
+- Moved external-evidence caching outside scanned repositories and revalidated cached provenance.
+- Rejected repository symlinks before host-side verification reads.
+
 ## 0.0.0-alpha
 
 - Added read-only Python repository scanning with versioned JSON reports.

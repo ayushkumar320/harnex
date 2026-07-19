@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Literal
 
@@ -76,6 +77,14 @@ class ApplyTransactionJournal(BaseModel):
     plan_hash: str
     repository_root: str
     files: list[TransactionFile]
+
+
+@dataclass(frozen=True)
+class _AppliedWrite:
+    target: Path
+    target_backup: Path | None
+    generated_base: Path
+    generated_base_backup: Path | None
 
 
 def load_plan_artifact(path: Path) -> tuple[HarnessPlan, str]:
@@ -367,7 +376,7 @@ def _apply_staged_files(
     journal_path: Path,
 ) -> ApplyTransactionJournal:
     files: list[TransactionFile] = []
-    applied: list[tuple[Path, Path | None]] = []
+    applied: list[_AppliedWrite] = []
     previous_journal = _load_existing_journal(journal_path)
     try:
         for manifest in manifests:
@@ -389,6 +398,8 @@ def _apply_staged_files(
             previous_hash: str | None = None
             previous_backup_path: str | None = None
             generated_base_path = _generated_base_path(journal_path, manifest.path)
+            target_backup: Path | None = None
+            generated_base_backup: Path | None = None
             if target.exists():
                 if not target.is_file():
                     raise _path_error(manifest.path)
@@ -403,14 +414,31 @@ def _apply_staged_files(
                     staged_path=staged,
                     previous_entry=previous_entry,
                 )
-                previous_hash = _sha256_bytes(target.read_bytes())
+                previous_data = target.read_bytes()
+                previous_hash = _sha256_bytes(previous_data)
+                target_backup = _previous_backup_path(journal_path, manifest.path)
+                target_backup.parent.mkdir(parents=True, exist_ok=True)
+                _atomic_write(target_backup, previous_data)
+                previous_backup_path = str(target_backup)
             else:
                 data = staged.read_bytes()
+            if generated_base_path.exists():
+                if not generated_base_path.is_file():
+                    raise _path_error(manifest.path)
+                generated_base_backup = _generated_base_backup_path(journal_path, manifest.path)
+                generated_base_backup.parent.mkdir(parents=True, exist_ok=True)
+                _atomic_write(generated_base_backup, generated_base_path.read_bytes())
             target.parent.mkdir(parents=True, exist_ok=True)
+            applied_write = _AppliedWrite(
+                target=target,
+                target_backup=target_backup,
+                generated_base=generated_base_path,
+                generated_base_backup=generated_base_backup,
+            )
+            applied.append(applied_write)
             _atomic_write(target, data)
             generated_base_path.parent.mkdir(parents=True, exist_ok=True)
-            generated_base_path.write_bytes(staged.read_bytes())
-            applied.append((target, None))
+            _atomic_write(generated_base_path, staged.read_bytes())
             files.append(
                 TransactionFile(
                     path=manifest.path,
@@ -468,17 +496,26 @@ def _apply_staged_files(
 
 def _atomic_write(path: Path, data: bytes) -> None:
     temp = path.with_name(f".{path.name}.autoharness-tmp")
-    temp.write_bytes(data)
-    temp.replace(path)
+    try:
+        temp.write_bytes(data)
+        temp.replace(path)
+    finally:
+        if temp.exists():
+            temp.unlink()
 
 
-def _rollback_applied(applied: list[tuple[Path, Path | None]]) -> None:
-    for target, backup in reversed(applied):
-        if backup is None:
-            if target.exists():
-                target.unlink()
-            continue
-        _atomic_write(target, backup.read_bytes())
+def _rollback_applied(applied: list[_AppliedWrite]) -> None:
+    for item in reversed(applied):
+        _restore_path(item.generated_base, item.generated_base_backup)
+        _restore_path(item.target, item.target_backup)
+
+
+def _restore_path(path: Path, backup: Path | None) -> None:
+    if backup is None:
+        if path.exists():
+            path.unlink()
+        return
+    _atomic_write(path, backup.read_bytes())
 
 
 def _load_existing_journal(path: Path) -> ApplyTransactionJournal | None:
@@ -553,6 +590,14 @@ def _reapply_conflict(path: str, reason: str) -> AutoHarnessError:
 
 def _generated_base_path(journal_path: Path, rel_path: str) -> Path:
     return journal_path.parent / journal_path.stem / "generated-base" / rel_path
+
+
+def _previous_backup_path(journal_path: Path, rel_path: str) -> Path:
+    return journal_path.parent / journal_path.stem / "previous-target" / rel_path
+
+
+def _generated_base_backup_path(journal_path: Path, rel_path: str) -> Path:
+    return journal_path.parent / journal_path.stem / "previous-generated-base" / rel_path
 
 
 def _render_templates(action: PlanAction) -> dict[str, str]:

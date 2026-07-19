@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from autoharness.external_evidence import (
@@ -149,3 +151,29 @@ def test_file_external_evidence_cache_round_trips_and_expires(tmp_path) -> None:
 
     assert cache.get(request) == evidence
     assert expired_cache.get(request) is None
+
+
+def test_file_external_evidence_cache_rejects_tampered_domain_and_content(tmp_path) -> None:
+    request = EvidenceSearchRequest(
+        query="openai docs",
+        include_domains=["platform.openai.com"],
+        credits_remaining=1,
+    )
+    evidence = [
+        external_evidence(
+            url="https://platform.openai.com/docs",
+            title="OpenAI Docs",
+            text="Official docs",
+            query=request.query,
+            allowed_domains=request.include_domains,
+        )
+    ]
+    cache = FileExternalEvidenceCache(tmp_path / "cache", ttl_days=14)
+    cache.put(request, evidence)
+    cache_path = cache._path(request)
+    payload = json.loads(cache_path.read_text(encoding="utf-8"))
+    payload["evidence"][0]["final_url"] = "https://example.com/injected"
+    payload["evidence"][0]["text"] = "tampered content"
+    cache_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert cache.get(request) is None

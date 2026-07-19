@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Literal, Protocol
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from autoharness.retrieval_models import ExternalEvidence
 
@@ -196,11 +196,28 @@ class FileExternalEvidenceCache:
         path = self._path(request)
         if not path.exists():
             return None
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        created_at = datetime.fromisoformat(payload["created_at"])
-        if datetime.now(UTC) - created_at > self.ttl:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if payload.get("schema_version") != "1.0":
+                return None
+            if payload.get("cache_key") != search_cache_key(request):
+                return None
+            created_at = datetime.fromisoformat(payload["created_at"])
+            if created_at.tzinfo is None or datetime.now(UTC) - created_at > self.ttl:
+                return None
+            evidence = [ExternalEvidence.model_validate(item) for item in payload["evidence"]]
+        except (
+            OSError,
+            KeyError,
+            TypeError,
+            ValueError,
+            json.JSONDecodeError,
+            ValidationError,
+        ):
             return None
-        return [ExternalEvidence.model_validate(item) for item in payload["evidence"]]
+        if not all(_cached_evidence_matches(item, request) for item in evidence):
+            return None
+        return evidence
 
     def put(self, request: EvidenceSearchRequest, evidence: list[ExternalEvidence]) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
@@ -218,6 +235,33 @@ class FileExternalEvidenceCache:
     def _path(self, request: EvidenceSearchRequest) -> Path:
         filename = search_cache_key(request).removeprefix("sha256:") + ".json"
         return self.root / filename
+
+
+def default_external_evidence_cache_root() -> Path:
+    configured = os.environ.get("AUTOHARNESS_CACHE_DIR")
+    if configured:
+        return Path(configured).expanduser() / "external-evidence"
+    cache_home = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
+    return cache_home / "autoharness" / "external-evidence"
+
+
+def _cached_evidence_matches(
+    evidence: ExternalEvidence,
+    request: EvidenceSearchRequest,
+) -> bool:
+    expected_query_hash = "sha256:" + hashlib.sha256(request.query.encode("utf-8")).hexdigest()
+    expected_content_hash = "sha256:" + hashlib.sha256(evidence.text.encode("utf-8")).hexdigest()
+    try:
+        canonical_domain = validate_official_domain(evidence.canonical_url, request.include_domains)
+        final_domain = validate_official_domain(evidence.final_url, request.include_domains)
+    except ValueError:
+        return False
+    return (
+        evidence.domain == final_domain
+        and canonical_domain == final_domain
+        and evidence.query_hash == expected_query_hash
+        and evidence.content_hash == expected_content_hash
+    )
 
 
 async def collect_external_evidence(

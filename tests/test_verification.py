@@ -1,10 +1,13 @@
 import json
+import os
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 import autoharness.verification as verification
 from autoharness.cli import app
+from autoharness.errors import AutoHarnessError
 from autoharness.reporter import write_report
 from autoharness.sandbox import (
     SandboxBackendKind,
@@ -117,6 +120,23 @@ def test_verify_reports_failed_sandbox_capability(tmp_path: Path) -> None:
     sandbox = next(check for check in report.checks if check.id == "sandbox_containment")
     assert sandbox.status == "failed"
     assert report.summary["failed"] == 1
+
+
+def test_verify_rejects_symlink_before_reading_external_target(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    outside = tmp_path / "outside-secret.txt"
+    outside.write_text("sk-external-secret-value", encoding="utf-8")
+    try:
+        os.symlink(outside, repo / "linked-secret.txt")
+    except OSError as exc:
+        pytest.skip(f"symlink creation unsupported: {exc}")
+
+    with pytest.raises(AutoHarnessError) as exc_info:
+        verification.verify_repository(repo, sandbox_backend=FakeSandboxBackend())
+
+    assert exc_info.value.code == "AH-V002"
+    assert "sk-external-secret-value" not in str(exc_info.value.details)
 
 
 def _repo_fixture(tmp_path: Path) -> Path:

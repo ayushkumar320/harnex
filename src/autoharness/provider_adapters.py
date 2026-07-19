@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 import os
 import time
@@ -38,14 +39,13 @@ class OpenAICompatibleProvider:
     async def complete(self, request: ModelRequest) -> ModelResponse:
         started = time.monotonic()
         try:
-            result = self.client.chat.completions.create(
+            result = await _call_client(
+                self.client.chat.completions.create,
                 model=request.model,
                 messages=request.messages,
                 temperature=request.temperature,
                 max_tokens=request.max_output_tokens,
             )
-            if inspect.isawaitable(result):
-                result = await result
         except Exception as exc:
             raise ProviderFailureException(classify_provider_error(exc)) from exc
         return _openai_like_response(result, started)
@@ -70,14 +70,13 @@ class HuggingFaceProvider:
     async def complete(self, request: ModelRequest) -> ModelResponse:
         started = time.monotonic()
         try:
-            result = self.client.chat_completion(
+            result = await _call_client(
+                self.client.chat_completion,
                 messages=request.messages,
                 model=request.model,
                 max_tokens=request.max_output_tokens,
                 temperature=request.temperature,
             )
-            if inspect.isawaitable(result):
-                result = await result
         except Exception as exc:
             raise ProviderFailureException(classify_provider_error(exc)) from exc
         return _openai_like_response(result, started)
@@ -98,7 +97,9 @@ def build_configured_providers(config: RouterConfig) -> dict[str, object]:
                 continue
             from groq import Groq
 
-            providers[entry.id] = GroqProvider(client=Groq(api_key=api_key))
+            providers[entry.id] = GroqProvider(
+                client=Groq(api_key=api_key, timeout=config.attempt_seconds)
+            )
         elif entry.provider is ProviderKind.HUGGINGFACE:
             token = os.environ.get("HF_TOKEN")
             if entry.locality is ProviderLocality.REMOTE and not token:
@@ -106,7 +107,12 @@ def build_configured_providers(config: RouterConfig) -> dict[str, object]:
             from huggingface_hub import InferenceClient
 
             providers[entry.id] = HuggingFaceProvider(
-                client=InferenceClient(model=entry.model, token=token, base_url=entry.base_url)
+                client=InferenceClient(
+                    model=entry.model,
+                    token=token,
+                    base_url=entry.base_url,
+                    timeout=config.attempt_seconds,
+                )
             )
         elif entry.provider is ProviderKind.OPENAI_COMPATIBLE:
             api_key = os.environ.get("OPENAI_COMPATIBLE_API_KEY")
@@ -120,9 +126,21 @@ def build_configured_providers(config: RouterConfig) -> dict[str, object]:
                 client=OpenAI(
                     api_key=api_key or "not-needed-for-local-endpoint",
                     base_url=entry.base_url,
+                    timeout=config.attempt_seconds,
                 )
             )
     return providers
+
+
+async def _call_client(method: Any, **kwargs: Any) -> Any:
+    """Call async SDK methods directly and isolate synchronous SDK methods from the event loop."""
+
+    if inspect.iscoroutinefunction(method):
+        return await method(**kwargs)
+    result = await asyncio.to_thread(method, **kwargs)
+    if inspect.isawaitable(result):
+        return await result
+    return result
 
 
 def classify_provider_error(error: Exception) -> ProviderFailure:

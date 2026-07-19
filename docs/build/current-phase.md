@@ -68,3 +68,13 @@ Completed Phase 8 slices:
   narrow alpha `go` decision.
 
 This pointer is intentionally simple. Update it when work moves to the next phase.
+
+Post-alpha hardening completed on 2026-07-19:
+
+- Apply rollback now restores pre-existing generated targets and generated-base snapshots after a
+  later transaction failure.
+- Synchronous provider SDK calls no longer block the async router, and configured SDK timeouts use
+  the router attempt deadline.
+- Online-scan external-evidence caching moved outside target repositories and cached evidence is
+  revalidated before reuse.
+- Verification rejects repository symlinks before host-side hashing or copying.

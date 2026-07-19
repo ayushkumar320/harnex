@@ -192,6 +192,38 @@ def test_apply_rolls_back_when_later_write_fails(
     assert payload["status"] == "rolled_back"
 
 
+def test_reapply_rollback_restores_existing_targets_and_generated_bases(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
+    output_path = tmp_path / "apply-preview.json"
+    first = apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
+    assert first.journal_path is not None
+    target = repo / ".autoharness/generated/autoharness_config.py"
+    journal_path = Path(first.journal_path)
+    base = generation._generated_base_path(
+        journal_path, ".autoharness/generated/autoharness_config.py"
+    )
+    original_target = target.read_bytes()
+    original_base = base.read_bytes()
+    original_atomic_write = generation._atomic_write
+
+    def fail_on_logger(path: Path, data: bytes) -> None:
+        if path.name == "autoharness_jsonl_logger.py" and "generated-base" not in path.parts:
+            raise OSError("simulated reapply failure")
+        original_atomic_write(path, data)
+
+    monkeypatch.setattr(generation, "_atomic_write", fail_on_logger)
+
+    with pytest.raises(AutoHarnessError) as exc_info:
+        apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
+
+    assert exc_info.value.code == "AH-G009"
+    assert target.read_bytes() == original_target
+    assert base.read_bytes() == original_base
+
+
 def test_apply_cli_reports_structured_rollback_failure(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

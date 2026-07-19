@@ -78,6 +78,8 @@ uv run harness scan . --output .autoharness/scan.json --fail-on high
 ```
 
 `scan` parses Python files as data. It does not import target modules, run setup hooks, execute tests, or call model providers.
+When opt-in web evidence is enabled, its cache is stored outside the target repository under the
+AutoHarness user cache directory. Set `AUTOHARNESS_CACHE_DIR` to choose a different cache root.
 
 Inspect provider, web-evidence, and sandbox configuration without sending repository evidence:
 

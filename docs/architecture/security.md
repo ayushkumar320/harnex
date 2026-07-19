@@ -51,6 +51,11 @@ Tavily requests may contain public package names, versions, API symbols, officia
 
 Web enrichment is off by default for private repositories, disabled during verification, and bounded by a per-command credit budget. Responses are cached with URL, domain, retrieval time, query hash, content hash, and expiration. Redirects and final domains are validated against policy.
 
+External-evidence cache files live in the AutoHarness user cache directory, never in the target
+repository. Cache reads are untrusted inputs: the cache key, query hash, content hash, canonical
+domain, and final domain are revalidated before evidence is reused. Invalid entries are treated as
+cache misses.
+
 Tavily content is delimited as untrusted external evidence. It cannot create permissions, approve generation, change sandbox policy, select a remote model, or override local structural evidence.
 
 ## Secret Handling
@@ -74,6 +79,9 @@ hash. Destination-specific context limits may remove evidence but cannot add unp
 content. Health and circuit-breaker records contain normalized failures and timing only, not
 prompts, outputs, credentials, or provider error bodies. Parallel hedged requests are not
 used because they unnecessarily disclose the same evidence to multiple services.
+Synchronous provider SDK methods run outside the async event loop, and configured SDK timeouts
+match the router attempt deadline. Router cancellation bounds caller waiting; the SDK timeout bounds
+the underlying synchronous request.
 
 ## Side-Effect Classification
 
@@ -133,10 +141,15 @@ The AutoHarness application container in the root `Dockerfile` is not the target
 - Show the diff before applying.
 - Record provenance and use three-way comparison on reapplication.
 - Never silently replace developer-edited generated files.
+- Before replacing an existing generated target or generated-base snapshot, persist a
+  transaction-scoped backup and restore both layers if any later transaction step fails.
 
 ## Verification Safety
 
 Verification uses a disposable worktree or sandbox, fixture credentials, mocked providers, and denied network. Importing or executing target code occurs only within this boundary.
+
+Host-side verification rejects repository symlinks before hashing or copying the tree so an
+untrusted link cannot cause reads outside the declared repository root.
 
 Live calls, package installation, network access, browser automation, database access, and destructive tools require separate explicit approval. Results identify anything not exercised.
 

@@ -1,3 +1,4 @@
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -12,6 +13,7 @@ from autoharness.providers import (
     DataPolicy,
     FailureKind,
     ModelRequest,
+    ModelRouter,
     ProviderFailureException,
     ProviderKind,
     ProviderLocality,
@@ -142,3 +144,47 @@ def test_provider_factory_leaves_missing_remote_credentials_unregistered(
     )
 
     assert build_configured_providers(config) == {}
+
+
+@pytest.mark.asyncio
+async def test_router_deadline_bounds_blocking_synchronous_sdk_call() -> None:
+    result = SimpleNamespace(
+        id="late",
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(content="too late"),
+                finish_reason="stop",
+            )
+        ],
+        usage=None,
+    )
+
+    class BlockingCompletions(ChatCompletions):
+        def create(self, **kwargs):
+            time.sleep(0.25)
+            return result
+
+    config = RouterConfig(
+        enabled=True,
+        data_policy=DataPolicy.REMOTE_ALLOWED,
+        route=[
+            RouteEntry(
+                id="blocking",
+                provider=ProviderKind.OPENAI_COMPATIBLE,
+                model="demo",
+                locality=ProviderLocality.REMOTE,
+            )
+        ],
+        deadlines={"attempt_seconds": 0.02, "operation_seconds": 0.1},
+        max_attempts_per_provider=1,
+        max_total_attempts=1,
+    )
+    provider = OpenAICompatibleProvider(client=OpenAIClient(BlockingCompletions(result=result)))
+    started = time.monotonic()
+
+    routed = await ModelRouter(config, {"blocking": provider}).complete(request())
+
+    elapsed = time.monotonic() - started
+    assert routed.status == "incomplete_model_unavailable"
+    assert routed.attempts[0].failure_kind is FailureKind.TIMEOUT_BEFORE_RESPONSE
+    assert elapsed < 0.15

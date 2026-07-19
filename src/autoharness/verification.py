@@ -555,8 +555,26 @@ def _copy_repository(source: Path, destination: Path) -> None:
 
 def _tree_hash(root: Path) -> str:
     digest = hashlib.sha256()
-    files = (item for item in root.rglob("*") if item.is_file() and ".git" not in item.parts)
-    for path in sorted(files):
+    paths = [item for item in root.rglob("*") if ".git" not in item.parts]
+    for path in sorted(paths):
+        if path.is_symlink():
+            raise AutoHarnessError(
+                code="AH-V002",
+                message="Verification refuses repository symlinks.",
+                context=ErrorContext(
+                    field="path",
+                    source="target repository",
+                    expected="A repository tree without symlinks during host-side verification.",
+                    next_action=(
+                        "Remove or exclude the symlink, then rerun verification in the "
+                        "supported boundary."
+                    ),
+                ),
+                exit_code=5,
+                details={"path": str(path.relative_to(root))},
+            )
+        if not path.is_file():
+            continue
         rel = path.relative_to(root).as_posix()
         digest.update(rel.encode("utf-8"))
         digest.update(b"\0")

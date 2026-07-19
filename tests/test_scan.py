@@ -341,3 +341,33 @@ def test_online_scan_uses_external_provider_and_cache(tmp_path: Path) -> None:
     assert provider.calls == 1
     assert second.evidence_bundle is not None
     assert second.evidence_bundle.external_evidence == first.evidence_bundle.external_evidence
+
+
+def test_online_scan_default_cache_does_not_write_target_repository(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    write(repo / "README.md", "# Agent\n\nUses OpenAI docs.\n")
+    write(repo / "agent.py", "def run():\n    return None\n")
+    cache_home = tmp_path / "cache-home"
+    monkeypatch.setenv("AUTOHARNESS_CACHE_DIR", str(cache_home))
+    evidence = external_evidence(
+        url="https://platform.openai.com/docs",
+        title="OpenAI Docs",
+        text="Official OpenAI API docs.",
+        query="openai official documentation agent reliability",
+        allowed_domains=["platform.openai.com"],
+    )
+    provider = FakeExternalEvidenceProvider([evidence])
+
+    report = scan_repository(
+        repo,
+        online=True,
+        web_evidence_config=WebEvidenceConfig(enabled=True, max_credits_per_command=1),
+        external_provider=provider,
+    )
+
+    assert report.evidence_bundle is not None
+    assert not (repo / ".autoharness").exists()
+    assert (cache_home / "external-evidence").is_dir()

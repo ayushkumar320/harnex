@@ -11,6 +11,7 @@ from autoharness.external_evidence import (
     WebEvidenceConfig,
     build_tavily_provider_from_env,
     collect_external_evidence,
+    default_external_evidence_cache_root,
 )
 from autoharness.python_scanner import scan_python_files
 from autoharness.reporter import attach_parse_failures, build_report
@@ -45,7 +46,7 @@ def scan_repository(
     cache = external_cache
     if cache is None and web_evidence_config.enabled:
         cache = FileExternalEvidenceCache(
-            Path(inventory.root) / ".autoharness" / "cache" / "external-evidence",
+            default_external_evidence_cache_root(),
             ttl_days=web_evidence_config.cache_ttl_days,
         )
     external_evidence, incomplete_reason = asyncio.run(
