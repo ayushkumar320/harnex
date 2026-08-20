@@ -17,8 +17,17 @@ def test_npm_wrapper_pins_the_python_version_it_ships_with() -> None:
     assert _npm_package()["pythonVersion"] == agentharness.__version__
 
 
+def _distribution_name() -> str:
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    return str(pyproject["project"]["name"])
+
+
 def test_installed_distribution_version_matches_the_package() -> None:
-    assert metadata.version("agentharness") == agentharness.__version__
+    assert metadata.version(_distribution_name()) == agentharness.__version__
+
+
+def test_npm_and_pypi_publish_under_the_same_name() -> None:
+    assert _npm_package()["name"] == _distribution_name()
 
 
 def test_pyproject_reads_its_version_from_the_package() -> None:
