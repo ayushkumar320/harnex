@@ -1,16 +1,182 @@
 # AgentHarness
 
-AgentHarness audits AI agent repositories for reliability and safety gaps, then generates reviewable fixes for patterns it can verify.
+AgentHarness is a read-only auditor for AI agent repositories. It finds the reliability and safety
+gaps that agent projects share — unbounded provider retries, unguarded side effects, swallowed
+exceptions, leaked secrets — and reports them with file, line, and symbol evidence.
 
-Most agent projects eventually need the same supporting infrastructure: bounded retries, structured logs, side-effect controls, sandboxing, and regression checks. AgentHarness makes those gaps visible before it tries to change anything.
+It never edits your source. Everything it writes lives in a `.agentharness/` directory.
 
-> **Project status:** public-alpha candidate. The current implementation supports a narrow Python 3.12 static-audit workflow, constrained direct-provider generation, runtime reliability fixtures, Docker-backed sandbox smoke verification, deterministic `harness verify`, and a labeled alpha benchmark corpus. Unsupported behavior is reported rather than silently transformed.
+> **Project status:** public-alpha candidate. The current implementation supports a narrow Python
+> 3.12 static-audit workflow, constrained direct-provider generation, runtime reliability fixtures,
+> Docker-backed sandbox smoke verification, deterministic `harness verify`, and a labeled alpha
+> benchmark corpus. Unsupported behavior is reported rather than silently transformed.
+
+## The Problem
+
+An agent that works in a demo fails in production for boring reasons. The provider times out and
+the retry loop never stops. A tool writes a file, the call is retried, and the file is written
+twice. A broad `except Exception` swallows a rate-limit error and the agent silently returns
+nothing. An API key ends up in a log line.
+
+None of this is exotic. Every agent project rediscovers the same list, usually after an incident.
+AgentHarness is the checklist, run against your actual code instead of your memory.
+
+It is the thing you run **before** you ship an agent, and in CI so it stays fixed.
+
+## What It Finds
+
+| Rule | Severity | What it detects |
+| --- | --- | --- |
+| `AH-R101` | high | A model-provider call with no detected reliability instrumentation |
+| `AH-R102` | medium | A broad `except Exception` that can hide provider or tool failures |
+| `AH-S101` | high | A shell, process, or filesystem write with no enforceable boundary |
+| `AH-S201` | medium | A file containing a credential-shaped value, excluded from analysis |
+| `AH-U101` | low | Dynamic import or lookup that static analysis cannot resolve |
+
+Every finding carries evidence: the file, the line, the symbol that triggered it, and a confidence
+score. Nothing is inferred from a model.
+
+## Install
+
+Requires Python 3.12 or 3.13. No API key, no configuration, no network access.
+
+```bash
+uv tool install agentharness   # or: pipx install agentharness
+```
+
+A Node toolchain can use the npm wrapper instead. It still needs Python 3.12 or 3.13 on `PATH`, and
+creates a private virtual environment for the matching wheel.
+
+```bash
+npm install -g agentharness
+```
+
+## Demo
+
+### 1. Audit
+
+Run it with no arguments inside any repository. This reads your code and writes nothing to it.
+
+```console
+$ cd ~/my-agent
+$ harness
+
+Workflow: audit
+Status: completed
+  scan: completed (0 ms) - status=complete
+    artifact: .agentharness/scan.json
+  plan: completed (0 ms) - status=review_required
+    artifact: .agentharness/plan.json
+Next action: Review the plan, then run harness improve to stage approved changes.
+Workflow artifact: .agentharness/workflow.json
+```
+
+### 2. Read the findings
+
+`harness report` renders the scan as Markdown, grouped by severity.
+
+```console
+$ harness report
+Wrote 16 finding(s) to .agentharness/findings.md
+```
+
+```markdown
+# AgentHarness findings
+
+Findings: 16 active 3 high, 1 medium, 12 low
+
+## High (3)
+
+### Tool side effect has no enforceable boundary
+
+`AH-S101` · confidence 0.86
+
+Locations:
+
+- `src/storage.py:56` — `path.write_text`
+
+**What it is:** A shell, process, or filesystem write side effect was detected.
+
+**Why it matters:** Retries or verification could mutate external state without an enforcement boundary.
+
+**What to change:** Classify the side effect and run future verification in an enforced sandbox.
+```
+
+That file is written to be handed to a coding agent:
+
+```bash
+claude "Read .agentharness/findings.md. For each finding, open the file at that line and tell me whether it is a real problem or intentional."
+```
+
+Triage before you fix. These are static matches — some flagged sites are deliberate.
+
+### 3. Generate scaffolding
+
+For `AH-R101` findings, AgentHarness can generate a starting point: a bounded runner, a JSONL
+logger, a config module, and a smoke test.
+
+```console
+$ harness improve
+
+Status: review_required
+  Actions                 1
+  Blocked findings        0
+- plan-action-6743699966 Generate bounded provider runtime scaffolding for detected model call
+
+Approve 1 planned action(s)? [y/N]: y
+
+Status: staged
+  Files staged          4
+
+Apply these staged files to the repository? [y/N]: y
+```
+
+It asks twice — once for the plan, once for the exact files. Declining either writes nothing and
+exits `4`. What lands:
+
+```
+.agentharness/generated/agentharness_config.py
+.agentharness/generated/agentharness_jsonl_logger.py
+.agentharness/generated/agentharness_runner.py
+.agentharness/generated/tests/test_agentharness_smoke.py
+```
+
+Your own files are untouched. You wire these in yourself.
+
+### 4. Gate CI
+
+```yaml
+- run: harness check . --fail-on high
+```
+
+Exits `1` when active findings reach that severity, `0` otherwise.
+
+### 5. Undo
+
+```bash
+rm -rf .agentharness
+```
+
+Everything AgentHarness writes lives there.
+
+## What It Does Not Do
+
+Being clear about this matters more than the feature list.
+
+- **It does not fix your code.** Generation exists for one rule, `AH-R101`, and it emits new files
+  next to your code rather than editing it. Every other finding is reported and stops there.
+- **It does not prove your agent is safe.** Static analysis misses dynamic behavior, and a policy
+  file is not a sandbox.
+- **It does not detect failures, it detects patterns.** A flagged `subprocess.run` may be exactly
+  what your program is for. Findings are a review queue, not a work order.
+- **It does not call a model.** The default scan is deterministic and offline.
 
 ## Product Principle
 
 **Audit first, generate second.**
 
-A scan is useful even when AgentHarness cannot safely modify a repository. Unknown behavior is reported with evidence instead of being hidden behind confident-looking generated code.
+A scan is useful even when AgentHarness cannot safely modify a repository. Unknown behavior is
+reported with evidence instead of being hidden behind confident-looking generated code.
 
 ```text
 Target repository
@@ -22,41 +188,24 @@ Target repository
     -> measured alpha benchmark
 ```
 
-## Intended Workflow
+## Commands
 
-Install it, then run it from inside your repository. No credentials needed.
-
-```bash
-uv tool install agentharness   # or: pipx install agentharness
-```
+The three you need:
 
 ```bash
 harness            # read-only audit of the current directory (same as `harness audit .`)
+harness report     # render findings as Markdown for review or for a coding agent
 harness improve    # audit, stage a diff, ask for approval, apply, then verify
-harness check --fail-on high   # non-interactive CI gate, exits 1 on findings
-harness report     # render findings as Markdown to hand to a coding agent
 ```
 
-`improve` asks twice: once to approve the plan, once to apply the exact staged files. Declining
-either leaves the repository untouched and exits `4`. Every stage is recorded in
-`.agentharness/workflow.json`.
+Plus `harness check --fail-on high` for CI. Every command takes `--format json`.
 
-The low-level commands remain available for automation and debugging:
-
-```bash
-harness scan .
-harness plan .
-harness approve .agentharness/plan.json
-harness apply .agentharness/plan.json --dry-run
-harness apply .agentharness/plan.json --yes
-harness verify .
-harness benchmark
-harness doctor
-```
+Each stage is also a command, for scripting and debugging:
 
 | Command | Responsibility |
 | --- | --- |
 | `audit` | Read-only scan and plan in one command |
+| `report` | Render a scan artifact as a Markdown findings brief |
 | `improve` | Approval-gated scan, plan, stage, apply, and verify |
 | `check` | Non-interactive severity gate for CI |
 | `scan` | Read-only analysis with source evidence and confidence |
@@ -66,6 +215,11 @@ harness doctor
 | `verify` | Run deterministic checks in a disposable workspace with denied-network sandbox checks |
 | `benchmark` | Measure the labeled alpha fixture corpus without live provider calls |
 | `doctor` | Report provider, web-evidence, sandbox, and configuration readiness |
+
+`approve` is the safety boundary: a fresh plan is always unapproved, and `apply` refuses to run on
+an unapproved plan.
+
+New here? [BOOTSTRAP.md](BOOTSTRAP.md) is a plain-language walkthrough.
 
 ## Initial Scope
 
@@ -83,27 +237,6 @@ The alpha support claim is intentionally narrow:
 - Fixture-driven verification and benchmark reporting
 
 AgentHarness will report unsupported patterns instead of silently generating code for them.
-
-## Install
-
-New here? [BOOTSTRAP.md](BOOTSTRAP.md) is a plain-language walkthrough for trying AgentHarness on a
-real repository.
-
-
-AgentHarness is a Python 3.12/3.13 CLI. Install it with `pipx` (or `uv tool`):
-
-```bash
-pipx install agentharness
-harness --version
-```
-
-A Node-based toolchain can use the npm wrapper instead. It still requires Python 3.12 or 3.13 on
-`PATH`; it creates a private virtual environment and installs the matching wheel into it.
-
-```bash
-npm install -g agentharness
-harness --version
-```
 
 ## Development Setup
 
