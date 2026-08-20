@@ -2,6 +2,12 @@
 
 ## 0.1.0a2
 
+- Renamed the PyPI and npm distribution from `agentharness` to `agentgap`. PyPI rejects
+  `agentharness` as too similar to the existing `agent-harness` project, which strips separators
+  when comparing names. The import package stays `agentharness`, as does the `.agentharness/`
+  artifact directory, the `AGENTHARNESS_` environment prefix, the sandbox image name, and the
+  `harness` command; `agent-harness` installs a module named `agent_harness`, so there is no import
+  collision to resolve.
 - Excluded vendored dependencies from the scan. `DEFAULT_EXCLUDED_DIRS` covered `.venv` and
   `node_modules` but not `vendor`, `venv`, `env`, `site-packages`, `third_party`,
   `bower_components`, or `.eggs`, so third-party code was audited as if it were first-party. On one

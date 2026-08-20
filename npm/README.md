@@ -23,14 +23,17 @@ Installation fails with instructions if no supported interpreter is found. Set
 ## Install
 
 ```bash
-npm install -g agentharness
+npm install -g agentgap
 harness --version
 ```
+
+The package is `agentgap`; the command it installs is `harness`.
+
 
 If you do not need the Node entry point, install the Python package directly instead:
 
 ```bash
-uv tool install agentharness   # or: pipx install agentharness
+uv tool install agentgap   # or: pipx install agentgap
 ```
 
 ## Usage

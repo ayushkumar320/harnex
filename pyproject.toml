@@ -3,9 +3,9 @@ requires = ["hatchling>=1.27,<2"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agentharness"
+name = "agentgap"
 dynamic = ["version"]
-description = "Reliability auditor and constrained harness generator for AI agent repositories"
+description = "Read-only reliability and safety auditor for AI agent repositories"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 license = "MIT"

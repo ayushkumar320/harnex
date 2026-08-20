@@ -9,10 +9,10 @@ const { VENV_DIR, findPython, venvBin } = require("./lib/python.js");
 const pkg = require("./package.json");
 // Overridable so CI can smoke-test the wrapper against a local wheel before the
 // matching version exists on PyPI.
-const REQUIREMENT = process.env.AGENTHARNESS_PYTHON_REQUIREMENT || `agentharness==${pkg.pythonVersion}`;
+const REQUIREMENT = process.env.AGENTHARNESS_PYTHON_REQUIREMENT || `agentgap==${pkg.pythonVersion}`;
 
 const NO_PYTHON = `
-agentharness requires Python >=3.12,<3.14 on PATH, and none was found.
+agentgap requires Python >=3.12,<3.14 on PATH, and none was found.
 
 Install Python 3.12 or 3.13, then reinstall this package:
   https://www.python.org/downloads/
@@ -31,7 +31,7 @@ function run(command, args) {
 
 function main() {
   if (process.env.AGENTHARNESS_SKIP_INSTALL) {
-    console.log("agentharness: AGENTHARNESS_SKIP_INSTALL set, skipping Python install.");
+    console.log("agentgap: AGENTHARNESS_SKIP_INSTALL set, skipping Python install.");
     return;
   }
 

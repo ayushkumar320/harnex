@@ -72,12 +72,12 @@ jobs:
         run: |
           version="$(node -p "require('./package.json').pythonVersion")"
           for _ in $(seq 1 30); do
-            if python -m pip download --no-deps --dest /tmp/pypi-check "agentharness==$version"; then
+            if python -m pip download --no-deps --dest /tmp/pypi-check "agentgap==$version"; then
               exit 0
             fi
             sleep 20
           done
-          echo "agentharness==$version was not installable from PyPI in time" >&2
+          echo "agentgap==$version was not installable from PyPI in time" >&2
           exit 1
       - name: Smoke test the published wheel through the wrapper
         working-directory: npm

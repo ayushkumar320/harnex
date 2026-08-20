@@ -41,14 +41,17 @@ score. Nothing is inferred from a model.
 Requires Python 3.12 or 3.13. No API key, no configuration, no network access.
 
 ```bash
-uv tool install agentharness   # or: pipx install agentharness
+uv tool install agentgap   # or: pipx install agentgap
 ```
+
+The package is `agentgap`; the command it installs is `harness`.
+
 
 A Node toolchain can use the npm wrapper instead. It still needs Python 3.12 or 3.13 on `PATH`, and
 creates a private virtual environment for the matching wheel.
 
 ```bash
-npm install -g agentharness
+npm install -g agentgap
 ```
 
 ## Demo

@@ -1,8 +1,8 @@
 {
-  "name": "agentharness",
+  "name": "agentgap",
   "version": "0.1.0-alpha.2",
   "pythonVersion": "0.1.0a2",
-  "description": "Reliability auditor and constrained harness generator for AI agent repositories",
+  "description": "Read-only reliability and safety auditor for AI agent repositories",
   "keywords": ["ai-agents", "reliability", "static-analysis", "audit", "llm", "sandbox"],
   "homepage": "https://github.com/ayushkumar320/harnex",
   "repository": { "type": "git", "url": "git+https://github.com/ayushkumar320/harnex.git" },

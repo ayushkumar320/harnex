@@ -7,10 +7,13 @@ repository you point it at. It never edits your source files. No API key is need
 ## The three commands
 
 ```bash
-uv tool install agentharness
+uv tool install agentgap
 ```
 
-`pipx install agentharness` works the same way. To install from a local checkout instead, pass the
+The package is `agentgap`; the command it installs is `harness`.
+
+
+`pipx install agentgap` works the same way. To install from a local checkout instead, pass the
 path: `uv tool install --force /path/to/harnex`.
 
 Then, from inside your repository:

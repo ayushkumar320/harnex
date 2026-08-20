@@ -75,7 +75,7 @@ Before publishing a package, confirm these are true:
   single source of truth: `pyproject.toml` reads it through `[tool.hatch.version]`, and
   `tests/test_packaging.py` fails if `npm/package.json` has drifted from it.
 - Confirm `npm/package.json` carries both the PEP 440 version in `pythonVersion` and its semver
-  spelling in `version`, for example `0.1.0a1` and `0.1.0-alpha.1`.
+  spelling in `version`, for example `0.1.0a2` and `0.1.0-alpha.2`.
 - Confirm `README.md`, `CHANGELOG.md`, `SECURITY.md`, and the support matrix are current.
 - Confirm `docs/benchmark/alpha-results.json` reflects the latest benchmark run.
 - Confirm no `.env`, token, credential, or local-only artifact is included.
@@ -85,11 +85,11 @@ Bump the version in one place:
 
 ```python
 # src/agentharness/__init__.py
-__version__ = "0.1.0a1"
+__version__ = "0.1.0a2"
 ```
 
-Then mirror it in `npm/package.json` as `pythonVersion` (`0.1.0a1`) and `version`
-(`0.1.0-alpha.1`).
+Then mirror it in `npm/package.json` as `pythonVersion` (`0.1.0a2`) and `version`
+(`0.1.0-alpha.2`).
 
 Use a new version for every upload. Neither PyPI nor npm allows replacing an already published
 version.
@@ -147,8 +147,8 @@ ls -l dist
 You should see files like:
 
 ```text
-agentharness-0.1.0a1.tar.gz
-agentharness-0.1.0a1-py3-none-any.whl
+agentgap-0.1.0a2.tar.gz
+agentgap-0.1.0a2-py3-none-any.whl
 ```
 
 ## 6. Test The Built Wheel Locally
@@ -188,7 +188,7 @@ python3.12 -m venv /tmp/agentharness-testpypi
 /tmp/agentharness-testpypi/bin/python -m pip install \
   --index-url https://test.pypi.org/simple/ \
   --extra-index-url https://pypi.org/simple/ \
-  agentharness==0.1.0a1
+  agentgap==0.1.0a2
 /tmp/agentharness-testpypi/bin/harness --help
 ```
 
@@ -208,13 +208,13 @@ Verify the public install:
 ```bash
 python3.12 -m venv /tmp/agentharness-pypi
 /tmp/agentharness-pypi/bin/python -m pip install --upgrade pip
-/tmp/agentharness-pypi/bin/python -m pip install agentharness==0.1.0a1
+/tmp/agentharness-pypi/bin/python -m pip install agentgap==0.1.0a2
 /tmp/agentharness-pypi/bin/harness --help
 ```
 
 ## 9. Publish The npm Wrapper
 
-Publish to PyPI first. The wrapper's `postinstall` step installs `agentharness==<pythonVersion>`
+Publish to PyPI first. The wrapper's `postinstall` step installs `agentgap==<pythonVersion>`
 from PyPI into a private virtual environment, so a wrapper published ahead of the wheel would fail
 on a fresh install.
 
@@ -242,22 +242,22 @@ node bin/harness.js --version
 For an alpha container image, build with a matching tag:
 
 ```bash
-docker build -t agentharness:0.1.0a1 .
-docker run --rm agentharness:0.1.0a1 --help
+docker build -t agentharness:0.1.0a2 .
+docker run --rm agentharness:0.1.0a2 --help
 ```
 
 If publishing to a registry, tag and push:
 
 ```bash
-docker tag agentharness:0.1.0a1 ghcr.io/<owner>/agentharness:0.1.0a1
-docker push ghcr.io/<owner>/agentharness:0.1.0a1
+docker tag agentharness:0.1.0a2 ghcr.io/<owner>/agentharness:0.1.0a2
+docker push ghcr.io/<owner>/agentharness:0.1.0a2
 ```
 
 The sandbox image should be published separately if users need sandbox-backed verification:
 
 ```bash
-docker build -f Dockerfile.sandbox -t ghcr.io/<owner>/agentharness-sandbox:0.1.0a1 .
-docker push ghcr.io/<owner>/agentharness-sandbox:0.1.0a1
+docker build -f Dockerfile.sandbox -t ghcr.io/<owner>/agentharness-sandbox:0.1.0a2 .
+docker push ghcr.io/<owner>/agentharness-sandbox:0.1.0a2
 ```
 
 If you publish the sandbox image under a different name, update docs or configuration so users know
@@ -270,13 +270,13 @@ Update:
 - `CHANGELOG.md` with the release date and artifact names.
 - `README.md` installation section.
 - `docs/benchmark/alpha-results.json` if any code changed after the last benchmark.
-- Git tag, for example `v0.1.0a1`.
+- Git tag, for example `v0.1.0a2`.
 
 Suggested tag commands:
 
 ```bash
-git tag -a v0.1.0a1 -m "AgentHarness 0.1.0a1"
-git push origin v0.1.0a1
+git tag -a v0.1.0a2 -m "AgentHarness 0.1.0a2"
+git push origin v0.1.0a2
 ```
 
 ## Automated Release
@@ -300,7 +300,7 @@ The manual steps above remain the fallback when the workflow is unavailable.
 Once published, users should be able to run:
 
 ```bash
-pipx install agentharness
+pipx install agentgap
 harness --help
 harness scan /path/to/agent-repo --output .agentharness/scan.json
 harness plan .agentharness/scan.json --output .agentharness/plan.json

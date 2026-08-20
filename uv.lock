@@ -7,7 +7,7 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "agentharness"
+name = "agentgap"
 source = { editable = "." }
 dependencies = [
     { name = "detect-secrets" },
