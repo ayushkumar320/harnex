@@ -11,7 +11,7 @@ from agentharness.guard import (
     wrap,
 )
 
-__version__ = "0.1.0a3"
+__version__ = "0.1.0a4"
 
 __all__ = [
     "CommitStatusUnknown",

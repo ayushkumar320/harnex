@@ -1,5 +1,56 @@
 # Changelog
 
+## 0.1.0a4
+
+- Added the side-effect half of the harness: the `tool` decorator. It declares what re-running a
+  function would do and enforces it. Read-only and idempotent tools retry on transient failures;
+  an idempotent tool must supply an idempotency key, and a key that already committed in this
+  process returns its recorded result instead of running the tool again, which closes the
+  "the retry wrote the file twice" failure the README opens with. Non-idempotent and undeclared
+  tools are never retried: they raise `CommitStatusUnknown`, because whether the effect committed
+  is not observable from outside and a guess in either direction is a data bug. `AGENTHARNESS_DRY_RUN=1`
+  blocks every mutating tool and records the intent it would have performed.
+- `AH-S101` now treats a side effect inside a declared `@tool` as having its enforceable boundary,
+  so the rule closes the same way `AH-R101` does: audit names the gap, one decorator closes it,
+  audit confirms. `StructuralFact` gained an explicit `guarded` flag that both rules read.
+
+- Added the runtime harness as a library front door: `wrap(client)` and the `@guard` decorator.
+  The runtime primitives — bounded retry executor, normalized failure classification, redacted
+  JSONL events — already existed, but the only way to reach them was a five-step audit workflow
+  that generated a wrapper file into `.agentharness/generated/` for the user to wire up by hand.
+  `wrap` is a transparent proxy: it guards the provider calls it recognizes, using the same
+  method-chain table the static scanner uses, and passes every other attribute through untouched.
+- Closed the audit loop. `AH-R101` now treats a wrapped client as instrumentation, so the finding
+  it reports has a one-line fix and the next scan confirms it: audit names the gap, `wrap` closes
+  it, audit goes quiet. Its remediation text names the fix instead of describing a category.
+
+- Widened provider-call detection beyond OpenAI. `is_model_call` matched six substrings, so
+  Anthropic, Bedrock, Gemini, Mistral, Cohere, LiteLLM, Ollama, and Vertex calls were invisible:
+  on a 537-file agent repository the scan reported 2 model calls and missed a live
+  `bedrock.converse` loop. Detection now matches provider-only method chains through any receiver
+  name, plus module-level generation functions whose root is actually imported in the file.
+- Fixed the `AH-R101` false positive on locals that share a provider's name. Detection used
+  `symbol.startswith("groq.")`, so `groq = Path.home() / "groq_keys.env"` followed by
+  `groq.is_file()` was reported as an uninstrumented model call at high severity. Module-level
+  provider functions now require the root name to be bound by an import in that file. Both
+  `AH-R101` findings on the measured repository were this false positive.
+- Stopped reporting instrumented model calls as uninstrumented. `AH-R101` fired identically on a
+  `while True` / `except Exception: pass` retry and on a call with `timeout=`, `max_retries=`,
+  a bounded loop, a typed handler, and a terminal raise, which made the rule's own title false.
+  A call with a bounding keyword argument or a retry decorator in scope is no longer a finding;
+  it is still counted as a `model_call_candidate` fact so the summary stays honest.
+- Added `AH-R103`, unbounded retry loop: a `while True` wrapping an exception handler that
+  neither breaks, returns, nor re-raises. This is the failure that burns a token budget overnight,
+  and no rule covered it. It matched 3 real sites in 537 files.
+- Stopped excluding secret-bearing Python files from structural analysis. A credential-shaped
+  literal excluded the whole file, so the file most worth auditing was the one least audited: a
+  fixture with six planted gaps reported two findings until its fake API key was deleted, then
+  eight. Such files are now parsed for facts, which record symbols and line numbers but never
+  source text, while `AH-S201` still reports the secret.
+- Extended the alpha benchmark corpus from 10 to 15 labeled cases, covering an Anthropic call, an
+  instrumented call that must stay silent, an unbounded retry loop, a local variable named after a
+  provider, and a secret-bearing module with a real gap in it.
+
 ## 0.1.0a3
 
 - Widened `requires-python` from `>=3.12,<3.14` to `>=3.12,<3.15`. Python 3.14 is already the
