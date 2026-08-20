@@ -14,6 +14,7 @@ from agentharness.external_evidence import (
     external_evidence,
 )
 from agentharness.reporter import canonical_json
+from agentharness.repository import _looks_secret_content, build_inventory
 from agentharness.scan import scan_repository
 
 runner = CliRunner()
@@ -371,3 +372,39 @@ def test_online_scan_default_cache_does_not_write_target_repository(
     assert report.evidence_bundle is not None
     assert not (repo / ".agentharness").exists()
     assert (cache_home / "external-evidence").is_dir()
+
+
+@pytest.mark.parametrize(
+    ("sample", "expected"),
+    [
+        (b"GROQ_API_KEY=your_groq_api_key", False),
+        (b'export GROQ_API_KEY="your_groq_api_key"', False),
+        (b"Set `GROQ_API_KEY` before running.", False),
+        (b"OPENAI_API_KEY=<your-key-here>", False),
+        (b"sk-xxxxxxxxxxxxxxxxxxxx", False),
+        (b"AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", False),
+        (b"OPENAI_API_KEY=sk-proj-aB3xK9mQ7zR2wL5nP8vT4jH6", True),
+        (b"sk-ant-api03-Xy7Kq2Lm9Pw4Rt8Zn3Vb6Hj1Ds5Gf0", True),
+        (b"-----BEGIN PRIVATE KEY-----\nMIIE", True),
+        (b"-----BEGIN RSA PRIVATE KEY-----", True),
+        (b"GROQ_API_KEY=\nHUGGINGFACE_API_TOKEN=\n", False),
+        (b"HF_TOKEN=hf_...\nGROQ_API_KEY=\n", False),
+        (b'PEM_HEADER = "-----BEGIN "\nPEM_TAIL = "PRIVATE KEY-----"', False),
+        (b"-----BEGIN EC PRIVATE KEY-----", True),
+    ],
+)
+def test_secret_content_detection_ignores_documentation(sample: bytes, expected: bool) -> None:
+    assert _looks_secret_content(sample) is expected
+
+
+def test_vendored_directories_are_excluded_from_inventory(tmp_path: Path) -> None:
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "app.py").write_text("x = 1\n")
+    for name in ("vendor", "venv", "site-packages", "third_party"):
+        (tmp_path / name).mkdir()
+        (tmp_path / name / "dep.py").write_text("y = 2\n")
+
+    inventory = build_inventory(tmp_path, max_file_bytes=1_000_000)
+
+    included = {item.path for item in inventory.included_files}
+    assert included == {"src/app.py"}
