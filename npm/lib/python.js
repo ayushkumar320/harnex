@@ -6,14 +6,14 @@ const path = require("node:path");
 
 const IS_WINDOWS = process.platform === "win32";
 const MIN = [3, 12];
-const MAX_EXCLUSIVE = [3, 14];
+const MAX_EXCLUSIVE = [3, 15];
 const VENV_DIR = path.join(__dirname, "..", ".venv");
 
-// Candidate interpreters, most specific first, so a system default of 3.14+ does
-// not shadow a usable 3.12 or 3.13 that is also installed.
+// Candidate interpreters, most specific first, so a system default outside the
+// supported range does not shadow a usable interpreter that is also installed.
 const CANDIDATES = IS_WINDOWS
-  ? ["py -3.13", "py -3.12", "python3", "python"]
-  : ["python3.13", "python3.12", "python3", "python"];
+  ? ["py -3.14", "py -3.13", "py -3.12", "python3", "python"]
+  : ["python3.14", "python3.13", "python3.12", "python3", "python"];
 
 function versionOf(command) {
   const parts = command.split(" ");

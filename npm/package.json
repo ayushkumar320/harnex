@@ -1,7 +1,7 @@
 {
   "name": "agentgap",
-  "version": "0.1.0-alpha.2",
-  "pythonVersion": "0.1.0a2",
+  "version": "0.1.0-alpha.3",
+  "pythonVersion": "0.1.0a3",
   "description": "Read-only reliability and safety auditor for AI agent repositories",
   "keywords": ["ai-agents", "reliability", "static-analysis", "audit", "llm", "sandbox"],
   "homepage": "https://github.com/ayushkumar320/harnex",

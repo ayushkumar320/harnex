@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.0a3
+
+- Widened `requires-python` from `>=3.12,<3.14` to `>=3.12,<3.15`. Python 3.14 is already the
+  default interpreter on current macOS and Homebrew installs, so the old cap made
+  `pip install agentgap` fail with "Could not find a version that satisfies the requirement" for
+  users whose Python was perfectly capable of running it. The full test suite passes on 3.14. The
+  npm wrapper's independent interpreter gate, its candidate list, and its test were widened to
+  match, and CI now runs the checks on 3.12, 3.13, and 3.14 so the declared range stays true.
+
 ## 0.1.0a2
 
 - Renamed the PyPI and npm distribution from `agentharness` to `agentgap`. PyPI rejects

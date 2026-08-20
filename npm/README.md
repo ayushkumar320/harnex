@@ -14,7 +14,7 @@ then forwards every argument and exit code to that interpreter.
 ## Requirements
 
 - Node.js 18 or newer
-- Python 3.12 or 3.13 available on `PATH`
+- Python 3.12, 3.13, or 3.14 available on `PATH`
 
 Installation fails with instructions if no supported interpreter is found. Set
 `AGENTHARNESS_SKIP_INSTALL=1` to skip the Python install step, for example when vendoring

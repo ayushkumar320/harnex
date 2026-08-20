@@ -38,7 +38,7 @@ score. Nothing is inferred from a model.
 
 ## Install
 
-Requires Python 3.12 or 3.13. No API key, no configuration, no network access.
+Requires Python 3.12, 3.13, or 3.14. No API key, no configuration, no network access.
 
 ```bash
 uv tool install agentgap   # or: pipx install agentgap
@@ -47,7 +47,7 @@ uv tool install agentgap   # or: pipx install agentgap
 The package is `agentgap`; the command it installs is `harness`.
 
 
-A Node toolchain can use the npm wrapper instead. It still needs Python 3.12 or 3.13 on `PATH`, and
+A Node toolchain can use the npm wrapper instead. It still needs Python 3.12, 3.13, or 3.14 on `PATH`, and
 creates a private virtual environment for the matching wheel.
 
 ```bash

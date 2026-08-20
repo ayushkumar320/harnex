@@ -12,9 +12,9 @@ const pkg = require("./package.json");
 const REQUIREMENT = process.env.AGENTHARNESS_PYTHON_REQUIREMENT || `agentgap==${pkg.pythonVersion}`;
 
 const NO_PYTHON = `
-agentgap requires Python >=3.12,<3.14 on PATH, and none was found.
+agentgap requires Python >=3.12,<3.15 on PATH, and none was found.
 
-Install Python 3.12 or 3.13, then reinstall this package:
+Install Python 3.12, 3.13, or 3.14, then reinstall this package:
   https://www.python.org/downloads/
 
 The Python package can also be installed directly, without npm:
