@@ -1,6 +1,6 @@
 import pytest
 
-from autoharness.providers import (
+from agentharness.providers import (
     DataPolicy,
     FailureKind,
     FakeModelProvider,

@@ -71,7 +71,7 @@ historical debt to block every pull request.
 ## Detailed Codex Prompt
 
 ```text
-You are the lead engineer implementing AutoHarness Next Phase N5: CI drift and pull-request checking.
+You are the lead engineer implementing AgentHarness Next Phase N5: CI drift and pull-request checking.
 
 Act as:
 1. A senior CI and developer-tools engineer designing stable baselines, semantic matching, and actionable exit behavior.

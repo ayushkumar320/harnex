@@ -46,7 +46,7 @@ The user understands what passed, what failed, what was not exercised, and what 
 ## Detailed Codex Prompt
 
 ```text
-You are the lead engineer implementing AutoHarness Phase 7: isolated verification and trustworthy starter evals.
+You are the lead engineer implementing AgentHarness Phase 7: isolated verification and trustworthy starter evals.
 
 Act as:
 1. A senior test-infrastructure engineer skilled in hermetic environments, fault injection, deterministic assertions, and useful failure reports.
@@ -100,13 +100,13 @@ Run all gates and update README examples to match real output. Append the comple
 
 ### 2026-07-17 Phase 7 Completion
 
-- Added `src/autoharness/verification.py` with versioned `VerificationCheck`,
+- Added `src/agentharness/verification.py` with versioned `VerificationCheck`,
   `VerificationReport`, and draft semantic eval schemas.
 - Added `harness verify` with human and JSON output.
 - Verification creates a disposable workspace, hashes the original tree before and after checks,
   uses fake runtime/provider failures, and removes the workspace by default.
 - Deterministic checks now cover:
-  - Scan artifact freshness when `.autoharness/scan.json` is present.
+  - Scan artifact freshness when `.agentharness/scan.json` is present.
   - Generated Python compile/importability when generated files are present.
   - Bounded runtime retry and runtime JSONL redaction.
   - Timeout after a fake committed unknown side effect without duplicate retry.
@@ -117,8 +117,8 @@ Run all gates and update README examples to match real output. Append the comple
   non-mutation of the original tree.
 - Acceptance commands passed:
   - `uv run pytest tests/test_verification.py`
-  - `docker build -f Dockerfile.sandbox -t autoharness-sandbox:dev .`
-  - `uv run harness verify . --format json --output .autoharness/verify.json`
+  - `docker build -f Dockerfile.sandbox -t agentharness-sandbox:dev .`
+  - `uv run harness verify . --format json --output .agentharness/verify.json`
 - Exact current verification claims:
   - Runtime retry/redaction and duplicate-side-effect blocking are exercised through fakes.
   - Sandbox containment is exercised through the Docker backend smoke.

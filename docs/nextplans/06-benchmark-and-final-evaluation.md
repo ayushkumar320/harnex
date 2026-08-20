@@ -2,7 +2,7 @@
 
 ## Product Outcome
 
-AutoHarness has a reproducible, held-out evaluation demonstrating what it detects, what it
+AgentHarness has a reproducible, held-out evaluation demonstrating what it detects, what it
 can safely repair, which failures the repaired system withstands, and where results remain
 unsupported or inconclusive.
 
@@ -95,7 +95,7 @@ set without declaring a new split.
 ## Detailed Codex Prompt
 
 ```text
-You are the lead engineer and research evaluator implementing AutoHarness Next Phase N6: benchmark and final-year evaluation.
+You are the lead engineer and research evaluator implementing AgentHarness Next Phase N6: benchmark and final-year evaluation.
 
 Act as:
 1. A senior empirical software-engineering researcher defining ground truth, held-out evaluation, ablation, and threats to validity.

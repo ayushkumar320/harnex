@@ -1,17 +1,22 @@
 # Next Plans: Final-Year Product Extensions
 
-This directory contains optional extensions that can turn the AutoHarness baseline into a
+This directory contains optional extensions that can turn the AgentHarness baseline into a
 measurable final-year project. These plans do not replace or reorder
 [`docs/build/`](../build/README.md). A next-plan phase begins only after its listed baseline
 prerequisites have passed and their completion records are current.
 
 The academic and product thesis is:
 
-> AutoHarness should not merely recommend reliability improvements. It should show the
+> AgentHarness should not merely recommend reliability improvements. It should show the
 > evidence for a risk and measure whether an approved repair changes behavior under a
 > controlled failure.
 
 ## Recommended Phase Map
+
+Current implementation status as of 2026-08-20: the baseline build phases through Phase 8 are
+complete, N0 is partially delivered (see its completion record for the deferred parts), and every
+other next-plan phase below is still not started. Treat this table as the remaining
+product-extension backlog, not shipped functionality.
 
 | Phase | Outcome | Baseline prerequisite |
 | --- | --- | --- |
@@ -57,6 +62,20 @@ harness check .
 The low-level `scan`, `plan`, `apply`, `verify`, and `doctor` commands remain public for
 automation and diagnosis. Orchestration must preserve every permission and containment
 boundary of the underlying commands.
+
+## Remaining Work Summary
+
+- N0 is partially delivered: `audit`, `improve`, and `check` ship, while artifact cache reuse,
+  resumption flags, and the optional model stage remain.
+- N1 remains to make findings easier to understand through an evidence-linked risk graph and HTML
+  report.
+- N2 remains to let teams express versioned reliability policy instead of relying only on severity
+  thresholds.
+- N3 remains to exercise controlled failures under the verified containment boundary.
+- N4 remains to prove whether approved repairs improve behavior in before/after scenarios.
+- N5 remains to compare pull requests against an approved baseline and catch drift without blocking
+  on historical debt.
+- N6 remains to turn the selected next-plan work into a reproducible final-year evaluation.
 
 ## Research Questions
 

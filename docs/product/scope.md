@@ -91,7 +91,7 @@ Support is attached to findings, not the whole repository. A repo may have a ver
 
 ## Benchmark Corpus
 
-Create `autoharness-bench` from 10 to 20 small repositories or fixtures with labeled ground truth and seeded failures:
+Create `agentharness-bench` from 10 to 20 small repositories or fixtures with labeled ground truth and seeded failures:
 
 - Provider timeout before a response
 - Groq timeout followed by successful Hugging Face fallback
@@ -107,7 +107,7 @@ Create `autoharness-bench` from 10 to 20 small repositories or fixtures with lab
 - Dynamic tool registration marked unknown
 - User-modified generated file
 
-Do not tune only against repositories created by the AutoHarness author. Hold out several repos until release evaluation.
+Do not tune only against repositories created by the AgentHarness author. Hold out several repos until release evaluation.
 
 ## Release Gate
 

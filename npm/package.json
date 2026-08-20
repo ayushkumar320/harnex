@@ -1,0 +1,17 @@
+{
+  "name": "agentharness",
+  "version": "0.1.0-alpha.1",
+  "pythonVersion": "0.1.0a1",
+  "description": "Reliability auditor and constrained harness generator for AI agent repositories",
+  "keywords": ["ai-agents", "reliability", "static-analysis", "audit", "llm", "sandbox"],
+  "homepage": "https://github.com/ayushkumar/agentharness",
+  "repository": { "type": "git", "url": "git+https://github.com/ayushkumar/agentharness.git" },
+  "bugs": { "url": "https://github.com/ayushkumar/agentharness/issues" },
+  "license": "MIT",
+  "author": "Ayush Kumar <ayushofficial85385@gmail.com>",
+  "bin": { "harness": "bin/harness.js" },
+  "scripts": { "postinstall": "node install.js" },
+  "files": ["bin/", "lib/", "install.js", "README.md", "LICENSE"],
+  "engines": { "node": ">=18" },
+  "os": ["darwin", "linux", "win32"]
+}

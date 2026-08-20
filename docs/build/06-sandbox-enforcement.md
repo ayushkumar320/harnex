@@ -2,7 +2,7 @@
 
 ## Product Outcome
 
-AutoHarness provides one real, capability-tested sandbox backend for a constrained shell and filesystem tool interface. It fails closed when the host cannot enforce the requested boundary.
+AgentHarness provides one real, capability-tested sandbox backend for a constrained shell and filesystem tool interface. It fails closed when the host cannot enforce the requested boundary.
 
 ## User Experience Outcome
 
@@ -23,7 +23,7 @@ The user sees concrete containment facts before execution: mounts, writable path
 ## Deliverables
 
 - Sandbox request/result schemas
-- Docker backend and image definition separate from the AutoHarness app image
+- Docker backend and image definition separate from the AgentHarness app image
 - Capability report
 - Generated sandbox configuration for verified fixtures
 - Security test suite and platform limitation documentation
@@ -49,7 +49,7 @@ The user sees concrete containment facts before execution: mounts, writable path
 ## Detailed Codex Prompt
 
 ```text
-You are the lead engineer implementing AutoHarness Phase 6, its first genuine execution boundary.
+You are the lead engineer implementing AgentHarness Phase 6, its first genuine execution boundary.
 
 Operate as:
 1. A senior container security and platform engineer who distinguishes configuration from enforcement and tests every capability claim.
@@ -65,7 +65,7 @@ Before editing:
 Implement a typed SandboxBackend:
 - Define SandboxCapabilities, SandboxRequest, mount/network/resource/environment policies, and SandboxResult.
 - Implement a rootless/non-root Docker backend without exposing the host Docker socket to target code.
-- Use a dedicated target-execution image, separate from the AutoHarness application image.
+- Use a dedicated target-execution image, separate from the AgentHarness application image.
 - Mount source read-only and create explicit writable output and tmp mounts.
 - Deny network by default, drop all capabilities, enable no-new-privileges, set PID/memory/CPU/wall-time limits, and allowlist environment variables.
 - Use an explicit constrained tool protocol for shell and filesystem operations.
@@ -96,12 +96,12 @@ Do not claim production-grade isolation beyond tested capabilities. Update secur
 
 ### 2026-07-17 Initial Sandbox Enforcement Slice
 
-- Added `src/autoharness/sandbox.py` with typed sandbox capability, request, resource, and result
+- Added `src/agentharness/sandbox.py` with typed sandbox capability, request, resource, and result
   schemas plus a `DockerSandboxBackend`.
-- Added a separate `Dockerfile.sandbox` target-execution image. The root AutoHarness application
+- Added a separate `Dockerfile.sandbox` target-execution image. The root AgentHarness application
   image remains separate from the untrusted target-code execution image.
 - The Docker backend now:
-  - Fails closed when Docker is unavailable or `autoharness-sandbox:dev` is missing.
+  - Fails closed when Docker is unavailable or `agentharness-sandbox:dev` is missing.
   - Mounts target source read-only.
   - Mounts only approved output and tmp directories as writable.
   - Denies network with `--network none`.
@@ -115,7 +115,7 @@ Do not claim production-grade isolation beyond tested capabilities. Update secur
 - Added fake-backed negative tests for unavailable Docker, missing sandbox image, writable paths
   inside source, secret environment variables, redacted hostile output, and timeout handling.
 - Acceptance commands passed:
-  - `docker build -f Dockerfile.sandbox -t autoharness-sandbox:dev .`
+  - `docker build -f Dockerfile.sandbox -t agentharness-sandbox:dev .`
   - Real backend smoke: non-root UID `65532`, source write blocked, network denied, output write
     succeeded.
   - `uv run harness doctor --format json`
@@ -141,13 +141,13 @@ Do not claim production-grade isolation beyond tested capabilities. Update secur
 - Phase 7 `harness verify` now exercises the real Docker backend smoke: source write blocked,
   network denied, UID `65532`, and approved output write succeeded.
 - Acceptance commands passed:
-  - `docker build -f Dockerfile.sandbox -t autoharness-sandbox:dev .`
+  - `docker build -f Dockerfile.sandbox -t agentharness-sandbox:dev .`
   - `uv run harness doctor --format json`
-  - `uv run harness verify . --format json --output .autoharness/verify.json`
+  - `uv run harness verify . --format json --output .agentharness/verify.json`
   - `uv run pytest tests/test_sandbox.py tests/test_verification.py`
 - Capability matrix:
   - `docker_daemon`: supported on the tested Docker Desktop host.
-  - `sandbox_image`: supported after building `autoharness-sandbox:dev`.
+  - `sandbox_image`: supported after building `agentharness-sandbox:dev`.
   - `read_only_source_mount`: supported by Docker bind mount and verified by write denial.
   - `approved_writable_mounts`: supported by explicit output/tmp mounts and verified output write.
   - `network_denied`: supported by `--network none` and verified socket failure.
@@ -157,4 +157,4 @@ Do not claim production-grade isolation beyond tested capabilities. Update secur
   - `resource_limits`: requested with CPU, memory, PID, and wall-time limits; timeout behavior is
     tested by fakes.
 - Remaining non-alpha limitation: Docker Desktop rootless internals are not independently proven.
-  AutoHarness claims only the tested container policy and observed smoke behavior.
+  AgentHarness claims only the tested container policy and observed smoke behavior.

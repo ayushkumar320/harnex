@@ -2,9 +2,9 @@
 
 ## Security Position
 
-AutoHarness inspects and may later execute repositories that are buggy, compromised, or intentionally hostile. Its own model output is also untrusted.
+AgentHarness inspects and may later execute repositories that are buggy, compromised, or intentionally hostile. Its own model output is also untrusted.
 
-Security claims are capability-specific. AutoHarness must never report "sandboxed" or "verified" when only a configuration file exists.
+Security claims are capability-specific. AgentHarness must never report "sandboxed" or "verified" when only a configuration file exists.
 
 ## Trust Boundaries
 
@@ -35,7 +35,7 @@ The repository view normalizes paths, applies limits, records exclusions, and op
 
 README files, `AGENTS.md`, docstrings, and test text may contain instructions aimed at the planner. Retrieved content is quoted and delimited as repository evidence. It cannot:
 
-- Change AutoHarness system policy
+- Change AgentHarness system policy
 - Enable a provider or network
 - Request secret access
 - Alter allowed output paths
@@ -51,7 +51,7 @@ Tavily requests may contain public package names, versions, API symbols, officia
 
 Web enrichment is off by default for private repositories, disabled during verification, and bounded by a per-command credit budget. Responses are cached with URL, domain, retrieval time, query hash, content hash, and expiration. Redirects and final domains are validated against policy.
 
-External-evidence cache files live in the AutoHarness user cache directory, never in the target
+External-evidence cache files live in the AgentHarness user cache directory, never in the target
 repository. Cache reads are untrusted inputs: the cache key, query hash, content hash, canonical
 domain, and final domain are revalidated before evidence is reused. Invalid entries are treated as
 cache misses.
@@ -120,7 +120,7 @@ The MVP sandbox uses a dedicated rootless Docker execution backend with:
 
 Command-name deny lists are only defense in depth. They do not prevent interpreter, child-process, alias, encoding, or path-based bypasses.
 
-Phase 6 currently implements the first Docker backend contract in `src/autoharness/sandbox.py` and
+Phase 6 currently implements the first Docker backend contract in `src/agentharness/sandbox.py` and
 a separate `Dockerfile.sandbox` target-execution image. `harness doctor` reports the Docker daemon,
 the local sandbox image, mount policy, network denial, non-root user, dropped capabilities,
 `no-new-privileges`, resource limits, and environment allowlisting. The backend fails closed when
@@ -130,7 +130,7 @@ backend behavior or explicit Docker flags; do not broaden the claim to arbitrary
 
 Path tests must cover traversal, absolute paths, symlinks, mount boundaries, case behavior, and time-of-check/time-of-use assumptions. If Docker cannot enforce a declared capability on the host platform, verification fails closed.
 
-The AutoHarness application container in the root `Dockerfile` is not the target-code sandbox.
+The AgentHarness application container in the root `Dockerfile` is not the target-code sandbox.
 
 ## Generation Safety
 

@@ -3,8 +3,8 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from autoharness.benchmark import DEFAULT_CORPUS, run_benchmark
-from autoharness.cli import app
+from agentharness.benchmark import DEFAULT_CORPUS, run_benchmark
+from agentharness.cli import app
 
 runner = CliRunner()
 

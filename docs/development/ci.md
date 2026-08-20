@@ -7,7 +7,7 @@ No model provider or network access is required for the default scan.
 
 ```bash
 uv run harness scan . \
-  --output .autoharness/scan.json \
+  --output .agentharness/scan.json \
   --fail-on high
 ```
 
@@ -21,13 +21,13 @@ This command exits:
 | `3` | Repository could not be analyzed, scan was empty, or scan was partial |
 | `4` | Plan artifact is stale or requires unresolved approval |
 
-Suppressed findings remain visible in `.autoharness/scan.json` but do not count toward
+Suppressed findings remain visible in `.agentharness/scan.json` but do not count toward
 `--fail-on`.
 
 ## GitHub Actions Example
 
 ```yaml
-name: autoharness
+name: agentharness
 
 on:
   pull_request:
@@ -41,28 +41,28 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --all-extras --locked
-      - run: uv run harness scan . --output .autoharness/scan.json --fail-on high
+      - run: uv run harness scan . --output .agentharness/scan.json --fail-on high
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: autoharness-scan
-          path: .autoharness/scan.json
+          name: agentharness-scan
+          path: .agentharness/scan.json
 ```
 
 ## GitLab CI Example
 
 ```yaml
-autoharness_scan:
+agentharness_scan:
   image: python:3.12
   before_script:
     - pip install uv
     - uv sync --all-extras --locked
   script:
-    - uv run harness scan . --output .autoharness/scan.json --fail-on high
+    - uv run harness scan . --output .agentharness/scan.json --fail-on high
   artifacts:
     when: always
     paths:
-      - .autoharness/scan.json
+      - .agentharness/scan.json
 ```
 
 ## Read-Only Planning Check
@@ -70,13 +70,13 @@ autoharness_scan:
 To validate that a scan artifact can produce a reviewable plan without writing target files:
 
 ```bash
-uv run harness scan . --output .autoharness/scan.json
-uv run harness plan .autoharness/scan.json --output .autoharness/plan.json
+uv run harness scan . --output .agentharness/scan.json
+uv run harness plan .agentharness/scan.json --output .agentharness/plan.json
 ```
 
 `harness plan` rejects partial, stale, or incompatible scan artifacts with exit code `4`. A blocked
 plan also exits `4` after writing the plan artifact, so CI systems should upload
-`.autoharness/plan.json` on failure for review.
+`.agentharness/plan.json` on failure for review.
 
 ## Fixture Precision Snapshot
 

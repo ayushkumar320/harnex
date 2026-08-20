@@ -1,6 +1,6 @@
 # Build Plan
 
-This directory turns the AutoHarness vision into independently executable delivery phases. Complete phases in order. A phase starts only after the previous phase's acceptance gates pass or a documented decision explicitly changes the dependency.
+This directory turns the AgentHarness vision into independently executable delivery phases. Complete phases in order. A phase starts only after the previous phase's acceptance gates pass or a documented decision explicitly changes the dependency.
 
 Every phase document contains a ready-to-use Codex prompt. The prompt is not a substitute for inspecting the repository: [`AGENTS.md`](../../AGENTS.md) remains the governing contract.
 

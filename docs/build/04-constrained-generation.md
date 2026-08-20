@@ -6,7 +6,7 @@
 
 ## User Experience Outcome
 
-The developer feels that AutoHarness is assisting with a code change, not taking over the repository. They see exactly what will change, why, and how to undo it.
+The developer feels that AgentHarness is assisting with a code change, not taking over the repository. They see exactly what will change, why, and how to undo it.
 
 ## Scope
 
@@ -48,7 +48,7 @@ The developer feels that AutoHarness is assisting with a code change, not taking
 ## Detailed Codex Prompt
 
 ```text
-You are the lead engineer implementing AutoHarness Phase 4: the first repository mutation path.
+You are the lead engineer implementing AgentHarness Phase 4: the first repository mutation path.
 
 Operate as:
 1. A senior developer-tools engineer specializing in deterministic code generation, filesystem safety, merge behavior, and transactional updates.
@@ -75,7 +75,7 @@ Apply safely:
 - Use atomic replacement where possible and a transaction journal for recovery.
 - On reapply, compare previous generated base, current user content, and new generated content.
 - Preserve non-conflicting user edits. Stop on conflict and produce a precise report; never choose the generated version silently.
-- Implement --dry-run with zero repository writes outside the AutoHarness artifact directory.
+- Implement --dry-run with zero repository writes outside the AgentHarness artifact directory.
 - Provide a documented rollback path for the just-applied transaction.
 
 Initial generated slice:
@@ -109,16 +109,16 @@ Run all previous and current gates. Update docs with exact generated files and r
   referenced scan hash and repository freshness, accepts only approved
   `write_generated_files` actions for the `openai_compatible` adapter, and rejects unsafe paths,
   unapproved actions, unsupported adapters, stale scan artifacts, and missing generation actions.
-- Added deterministic staging under `.autoharness/staging/<plan-hash>/` plus a canonical
+- Added deterministic staging under `.agentharness/staging/<plan-hash>/` plus a canonical
   `apply_preview` JSON artifact.
 - Added generated-file manifest entries with target path, staged path, generator version, template
   version, plan hash, base hash when present, content hash, and action ID.
 - The initial direct-provider template set stages:
-  - `.autoharness/generated/autoharness_config.py`
-  - `.autoharness/generated/autoharness_jsonl_logger.py`
-  - `.autoharness/generated/autoharness_runner.py`
-  - `.autoharness/generated/tests/test_autoharness_smoke.py`
-- Adjusted scan freshness fingerprinting so AutoHarness' own `.autoharness` artifact directory
+  - `.agentharness/generated/agentharness_config.py`
+  - `.agentharness/generated/agentharness_jsonl_logger.py`
+  - `.agentharness/generated/agentharness_runner.py`
+  - `.agentharness/generated/tests/test_agentharness_smoke.py`
+- Adjusted scan freshness fingerprinting so AgentHarness' own `.agentharness` artifact directory
   does not make a source scan stale.
 - Added tests for deterministic dry-run staging, machine-readable CLI preview output,
   non-dry-run rejection, unapproved plan rejection, stale plan rejection, unsafe output path
@@ -135,7 +135,7 @@ tests, Docker gates, and the Phase 4 completion record.
 - Added explicit non-interactive approval with `harness apply --yes`. Running `apply` without
   `--dry-run` or `--yes` exits with `AH-G007` before writing target files.
 - Added atomic replacement from staged generated files into the approved generated paths.
-- Added transaction journals under `.autoharness/transactions/<transaction-id>.json` with
+- Added transaction journals under `.agentharness/transactions/<transaction-id>.json` with
   transaction status, plan hash, repository root, per-file previous hash, backup path when a file
   existed, and new content hash.
 - Added automatic rollback for files already written in the transaction if a later write fails.
@@ -168,18 +168,18 @@ negative tests, Docker gates, and the Phase 4 completion record.
 - Added a disposable fixture flow that scans `basic_agent`, creates an explicitly approved
   generation plan, applies generated files, and compiles all generated Python artifacts.
 - Final generated files for the direct-provider slice:
-  - `.autoharness/generated/autoharness_config.py`
-  - `.autoharness/generated/autoharness_jsonl_logger.py`
-  - `.autoharness/generated/autoharness_runner.py`
-  - `.autoharness/generated/tests/test_autoharness_smoke.py`
+  - `.agentharness/generated/agentharness_config.py`
+  - `.agentharness/generated/agentharness_jsonl_logger.py`
+  - `.agentharness/generated/agentharness_runner.py`
+  - `.agentharness/generated/tests/test_agentharness_smoke.py`
 - Acceptance commands passed:
   - `uv run ruff check .`
   - `uv run ruff format --check .`
   - `uv run mypy src`
   - `uv run pytest` (89 tests)
   - disposable scan-plan-apply-compile fixture flow
-  - `docker build -t autoharness:dev .`
-  - `docker run --rm autoharness:dev --help`
+  - `docker build -t agentharness:dev .`
+  - `docker run --rm agentharness:dev --help`
 - Known limitations deferred to later phases:
   - Generated files are review skeletons; full runtime retry behavior remains Phase 5.
   - Generated smoke tests are syntax/import scaffolds, not isolated target execution.

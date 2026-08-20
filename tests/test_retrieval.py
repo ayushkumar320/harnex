@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from autoharness.retrieval import build_local_index, retrieve_local
+from agentharness.retrieval import build_local_index, retrieve_local
 
 
 def write(path: Path, text: str) -> None:

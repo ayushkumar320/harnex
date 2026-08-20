@@ -9,13 +9,13 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-import autoharness.generation as generation
-from autoharness.cli import app
-from autoharness.errors import AutoHarnessError
-from autoharness.generation import SUPPORTED_OUTPUT_FILES, apply_approved_plan, stage_apply_preview
-from autoharness.planning import HarnessPlan, PlanAction, canonical_plan_json
-from autoharness.reporter import write_report
-from autoharness.scan import scan_repository
+import agentharness.generation as generation
+from agentharness.cli import app
+from agentharness.errors import AgentHarnessError
+from agentharness.generation import SUPPORTED_OUTPUT_FILES, apply_approved_plan, stage_apply_preview
+from agentharness.planning import HarnessPlan, PlanAction, canonical_plan_json
+from agentharness.reporter import write_report
+from agentharness.scan import scan_repository
 
 runner = CliRunner()
 
@@ -115,7 +115,7 @@ def test_apply_prompt_decline_is_clean_noop(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert "Apply declined" in result.output
-    assert not (repo / ".autoharness/generated/autoharness_config.py").exists()
+    assert not (repo / ".agentharness/generated/agentharness_config.py").exists()
 
 
 def test_apply_prompt_accept_applies_files(tmp_path: Path) -> None:
@@ -125,7 +125,7 @@ def test_apply_prompt_accept_applies_files(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert "Status: applied" in result.output
-    assert (repo / ".autoharness/generated/autoharness_config.py").is_file()
+    assert (repo / ".agentharness/generated/agentharness_config.py").is_file()
 
 
 def test_apply_clean_second_apply_is_allowed(tmp_path: Path) -> None:
@@ -137,14 +137,14 @@ def test_apply_clean_second_apply_is_allowed(tmp_path: Path) -> None:
 
     assert first.status == "applied"
     assert second.status == "applied"
-    assert (repo / ".autoharness/generated/autoharness_config.py").is_file()
+    assert (repo / ".agentharness/generated/agentharness_config.py").is_file()
 
 
 def test_apply_reapply_preserves_append_only_user_edit(tmp_path: Path) -> None:
     repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
     output_path = tmp_path / "apply-preview.json"
     apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
-    target = repo / ".autoharness/generated/autoharness_config.py"
+    target = repo / ".agentharness/generated/agentharness_config.py"
     target.write_text(target.read_text(encoding="utf-8") + "\n# user note\n", encoding="utf-8")
 
     apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
@@ -156,7 +156,7 @@ def test_apply_reapply_conflicts_on_generated_region_edit(tmp_path: Path) -> Non
     repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
     output_path = tmp_path / "apply-preview.json"
     apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
-    target = repo / ".autoharness/generated/autoharness_config.py"
+    target = repo / ".agentharness/generated/agentharness_config.py"
     target.write_text("# edited inside generated base\n", encoding="utf-8")
 
     result = runner.invoke(app, ["apply", str(plan_path), "--yes", "--verbose"])
@@ -175,18 +175,18 @@ def test_apply_rolls_back_when_later_write_fails(
     original_atomic_write = generation._atomic_write
 
     def fail_on_logger(path: Path, data: bytes) -> None:
-        if path.name == "autoharness_jsonl_logger.py":
+        if path.name == "agentharness_jsonl_logger.py":
             raise OSError("simulated write failure")
         original_atomic_write(path, data)
 
     monkeypatch.setattr(generation, "_atomic_write", fail_on_logger)
 
-    with pytest.raises(AutoHarnessError) as exc_info:
+    with pytest.raises(AgentHarnessError) as exc_info:
         apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
 
     assert exc_info.value.code == "AH-G009"
-    assert not (repo / ".autoharness/generated/autoharness_config.py").exists()
-    journal_paths = list((repo / ".autoharness" / "transactions").glob("*.json"))
+    assert not (repo / ".agentharness/generated/agentharness_config.py").exists()
+    journal_paths = list((repo / ".agentharness" / "transactions").glob("*.json"))
     assert len(journal_paths) == 1
     payload = json.loads(journal_paths[0].read_text(encoding="utf-8"))
     assert payload["status"] == "rolled_back"
@@ -200,23 +200,23 @@ def test_reapply_rollback_restores_existing_targets_and_generated_bases(
     output_path = tmp_path / "apply-preview.json"
     first = apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
     assert first.journal_path is not None
-    target = repo / ".autoharness/generated/autoharness_config.py"
+    target = repo / ".agentharness/generated/agentharness_config.py"
     journal_path = Path(first.journal_path)
     base = generation._generated_base_path(
-        journal_path, ".autoharness/generated/autoharness_config.py"
+        journal_path, ".agentharness/generated/agentharness_config.py"
     )
     original_target = target.read_bytes()
     original_base = base.read_bytes()
     original_atomic_write = generation._atomic_write
 
     def fail_on_logger(path: Path, data: bytes) -> None:
-        if path.name == "autoharness_jsonl_logger.py" and "generated-base" not in path.parts:
+        if path.name == "agentharness_jsonl_logger.py" and "generated-base" not in path.parts:
             raise OSError("simulated reapply failure")
         original_atomic_write(path, data)
 
     monkeypatch.setattr(generation, "_atomic_write", fail_on_logger)
 
-    with pytest.raises(AutoHarnessError) as exc_info:
+    with pytest.raises(AgentHarnessError) as exc_info:
         apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
 
     assert exc_info.value.code == "AH-G009"
@@ -232,7 +232,7 @@ def test_apply_cli_reports_structured_rollback_failure(
     original_atomic_write = generation._atomic_write
 
     def fail_on_logger(path: Path, data: bytes) -> None:
-        if path.name == "autoharness_jsonl_logger.py":
+        if path.name == "agentharness_jsonl_logger.py":
             raise OSError("simulated write failure")
         original_atomic_write(path, data)
 
@@ -242,12 +242,12 @@ def test_apply_cli_reports_structured_rollback_failure(
 
     assert result.exit_code == 5
     assert "AH-G009" in result.output
-    assert not (repo / ".autoharness/generated/autoharness_config.py").exists()
+    assert not (repo / ".agentharness/generated/agentharness_config.py").exists()
 
 
 def test_apply_rejects_special_file_target(tmp_path: Path) -> None:
     repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
-    target = repo / ".autoharness/generated/autoharness_config.py"
+    target = repo / ".agentharness/generated/agentharness_config.py"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.mkdir()
 
@@ -276,11 +276,11 @@ def test_generated_runtime_wrapper_runs_with_fake_provider(
     repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
     output_path = tmp_path / "apply-preview.json"
     apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
-    generated_root = repo / ".autoharness" / "generated"
+    generated_root = repo / ".agentharness" / "generated"
     monkeypatch.syspath_prepend(str(generated_root))
-    sys.modules.pop("autoharness_config", None)
-    sys.modules.pop("autoharness_runner", None)
-    runner_module = importlib.import_module("autoharness_runner")
+    sys.modules.pop("agentharness_config", None)
+    sys.modules.pop("agentharness_runner", None)
+    runner_module = importlib.import_module("agentharness_runner")
 
     class FakeClock:
         def __init__(self) -> None:
@@ -296,7 +296,7 @@ def test_generated_runtime_wrapper_runs_with_fake_provider(
 
     calls = 0
 
-    from autoharness.runtime import RuntimeFailure, RuntimeFailureKind
+    from agentharness.runtime import RuntimeFailure, RuntimeFailureKind
 
     def provider_with_runtime_failure(attempt: int) -> dict[str, object]:
         nonlocal calls
@@ -333,12 +333,12 @@ def test_generated_runtime_wrapper_returns_correction_packet(
     repo, _scan_path, plan_path = _approved_plan_fixture(tmp_path)
     output_path = tmp_path / "apply-preview.json"
     apply_approved_plan(plan_path=plan_path, output_path=output_path, confirm=True)
-    generated_root = repo / ".autoharness" / "generated"
+    generated_root = repo / ".agentharness" / "generated"
     monkeypatch.syspath_prepend(str(generated_root))
-    sys.modules.pop("autoharness_config", None)
-    sys.modules.pop("autoharness_runner", None)
-    runner_module = importlib.import_module("autoharness_runner")
-    from autoharness.runtime import RuntimeFailure, RuntimeFailureKind
+    sys.modules.pop("agentharness_config", None)
+    sys.modules.pop("agentharness_runner", None)
+    runner_module = importlib.import_module("agentharness_runner")
+    from agentharness.runtime import RuntimeFailure, RuntimeFailureKind
 
     def provider(_: int) -> dict[str, object]:
         raise RuntimeFailure(
@@ -401,7 +401,7 @@ def test_apply_rejects_symlink_output_component(tmp_path: Path) -> None:
     outside = tmp_path / "outside"
     outside.mkdir()
     try:
-        os.symlink(outside, repo / ".autoharness")
+        os.symlink(outside, repo / ".agentharness")
     except OSError as exc:
         pytest.skip(f"symlink creation unsupported: {exc}")
 

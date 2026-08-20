@@ -5,11 +5,11 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-import autoharness.verification as verification
-from autoharness.cli import app
-from autoharness.errors import AutoHarnessError
-from autoharness.reporter import write_report
-from autoharness.sandbox import (
+import agentharness.verification as verification
+from agentharness.cli import app
+from agentharness.errors import AgentHarnessError
+from agentharness.reporter import write_report
+from agentharness.sandbox import (
     SandboxBackendKind,
     SandboxCapability,
     SandboxCapabilityReport,
@@ -17,7 +17,7 @@ from autoharness.sandbox import (
     SandboxCommandResult,
     SandboxResult,
 )
-from autoharness.scan import scan_repository
+from agentharness.scan import scan_repository
 
 runner = CliRunner()
 
@@ -97,7 +97,7 @@ def test_verify_cli_outputs_machine_readable_report(
     assert payload["summary"]["requires_approval"] == 1
 
 
-def test_verify_reports_failed_sandbox_capability(tmp_path: Path) -> None:
+def test_verify_reports_unexercised_sandbox_capability(tmp_path: Path) -> None:
     repo = _repo_fixture(tmp_path)
 
     class MissingSandbox(FakeSandboxBackend):
@@ -118,8 +118,9 @@ def test_verify_reports_failed_sandbox_capability(tmp_path: Path) -> None:
     report = verification.verify_repository(repo, sandbox_backend=MissingSandbox())
 
     sandbox = next(check for check in report.checks if check.id == "sandbox_containment")
-    assert sandbox.status == "failed"
-    assert report.summary["failed"] == 1
+    assert sandbox.status == "not_exercised"
+    assert report.summary["failed"] == 0
+    assert report.summary["not_exercised"] >= 1
 
 
 def test_verify_rejects_symlink_before_reading_external_target(tmp_path: Path) -> None:
@@ -132,7 +133,7 @@ def test_verify_rejects_symlink_before_reading_external_target(tmp_path: Path) -
     except OSError as exc:
         pytest.skip(f"symlink creation unsupported: {exc}")
 
-    with pytest.raises(AutoHarnessError) as exc_info:
+    with pytest.raises(AgentHarnessError) as exc_info:
         verification.verify_repository(repo, sandbox_backend=FakeSandboxBackend())
 
     assert exc_info.value.code == "AH-V002"
@@ -156,6 +157,6 @@ def run():
 """,
         encoding="utf-8",
     )
-    scan_path = repo / ".autoharness" / "scan.json"
+    scan_path = repo / ".agentharness" / "scan.json"
     write_report(scan_path, scan_repository(repo))
     return repo

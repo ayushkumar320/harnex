@@ -6,6 +6,21 @@ Current status: Phase 8 completed on 2026-07-17 with a narrow public-alpha `go` 
 the checked-in fixture benchmark. Future work should move to `docs/nextplans/` or explicitly open a
 new post-alpha phase.
 
+Validation status: use the [V1 test guide](../development/v1-test.md) for the current
+plain-language command checklist covering setup, scan, plan, apply preview, verification,
+benchmark, quality gates, Docker images, and optional wheel testing.
+
+Remaining baseline-development work:
+
+- No additional baseline build phase is open.
+- Release-owner chores are done for the first public alpha: the package is named `agentharness`
+  on PyPI and npm, versioned `0.1.0a1`, MIT licensed, and released by
+  `.github/workflows/release.yml` on a `v*` tag. Remaining optional chores are SBOM and container
+  publishing.
+- Optional post-alpha product work is tracked in `docs/nextplans/`. N0 is partially delivered; the
+  remaining next-plan phase documents are design records until their acceptance gates are
+  implemented.
+
 Previously completed Phase 3 slices:
 
 - Initial deterministic finding catalog with evidence-cited findings.
@@ -28,8 +43,8 @@ Completed Phase 4 slices:
 
 - Initial `harness apply --dry-run` preview path for explicitly approved direct-provider
   generation plans.
-- Approved generation plans stage deterministic template output only under `.autoharness/staging`
-  and write a canonical `.autoharness/apply-preview.json` artifact.
+- Approved generation plans stage deterministic template output only under `.agentharness/staging`
+  and write a canonical `.agentharness/apply-preview.json` artifact.
 - Phase 4 apply rejects non-dry-run invocation, unapproved actions, unsupported adapters, unsafe
   paths, stale scan artifacts, and missing generation actions before target writes.
 - Declared output paths with existing symlink components are rejected before staging.
@@ -42,7 +57,7 @@ Completed Phase 4 slices:
 - Three-way reapplication replaces unchanged generated bases, preserves append-only user edits,
   and rejects edits inside generated base regions with a conflict.
 - Generated Python artifacts compile in a disposable fixture flow.
-- AutoHarness-owned `.autoharness` artifact directory creation no longer makes scan freshness
+- AgentHarness-owned `.agentharness` artifact directory creation no longer makes scan freshness
   stale.
 
 Completed Phase 6 slices:
@@ -78,3 +93,19 @@ Post-alpha hardening completed on 2026-07-19:
 - Online-scan external-evidence caching moved outside target repositories and cached evidence is
   revalidated before reuse.
 - Verification rejects repository symlinks before host-side hashing or copying.
+
+Documentation update on 2026-07-28:
+
+- Added `docs/development/v1-test.md` as the current hands-on v1/public-alpha validation checklist.
+- Linked the guide from the documentation index and development setup.
+- Clarified that baseline phases are complete, release chores remain, and next-plan work is not yet
+  implemented.
+
+Post-alpha product work on 2026-08-20:
+
+- Delivered the minimum viable subset of next-plan phase N0: `harness audit`, `harness improve`,
+  and `harness check`, plus a `workflow_run` artifact. See the
+  [N0 completion record](../nextplans/00-one-command-workflows.md) for deferred work.
+- Added `harness approve`. Before it, the deterministic planner emitted only `unresolved`
+  `review_only` actions, so `harness apply` was unreachable outside test fixtures.
+- Verification reports an unavailable Docker sandbox as `not_exercised` instead of `failed`.

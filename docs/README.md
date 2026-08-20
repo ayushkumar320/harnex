@@ -1,4 +1,4 @@
-# AutoHarness Documentation
+# AgentHarness Documentation
 
 This directory is the source of truth for product intent, architecture, development, and delivery.
 
@@ -31,6 +31,7 @@ This directory is the source of truth for product intent, architecture, developm
 ## Development
 
 - [Local and Docker setup](development/setup.md): UV, requirements, environment variables, quality checks, and containers
+- [V1 test guide](development/v1-test.md): plain-language command walkthrough for testing the current alpha candidate
 - [Startup and package release guide](development/startup-and-release.md): local startup, package builds, TestPyPI/PyPI, and container release
 - [CI usage](development/ci.md): read-only scan gates, artifact upload examples, and fixture precision snapshot
 

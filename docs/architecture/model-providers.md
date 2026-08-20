@@ -2,9 +2,9 @@
 
 ## Goal
 
-AutoHarness is LLM-core for interpretation, planning, and repository-specific generation. The provider layer makes that reasoning portable across free-tier, local, and hosted models while deterministic guardrails preserve safety and artifact validity.
+AgentHarness is LLM-core for interpretation, planning, and repository-specific generation. The provider layer makes that reasoning portable across free-tier, local, and hosted models while deterministic guardrails preserve safety and artifact validity.
 
-No product behavior may assume that a specific model, quota, or free tier will remain available. When no model is reachable, AutoHarness may emit a structural inventory, but it must label the full audit and plan as incomplete.
+No product behavior may assume that a specific model, quota, or free tier will remain available. When no model is reachable, AgentHarness may emit a structural inventory, but it must label the full audit and plan as incomplete.
 
 ## Initial Providers
 
@@ -52,7 +52,7 @@ Tavily is not part of this provider fallback chain. It implements the separate `
 
 ## Routing and Fallback Contract
 
-AutoHarness does not have a hard-coded primary provider. Groq is one adapter in an
+AgentHarness does not have a hard-coded primary provider. Groq is one adapter in an
 ordered, user-approved route. Provider order is configuration, and an installation is
 valid when Groq is absent or unavailable.
 
@@ -74,7 +74,7 @@ The router operates in these layers:
    interpretation, findings synthesis, and planning `incomplete_model_unavailable`.
 
 Layers 4 and 5 may send data only to destinations already listed in configuration. The CLI
-previews the ordered route and eligible evidence before the operation. AutoHarness never
+previews the ordered route and eligible evidence before the operation. AgentHarness never
 discovers a new remote destination at runtime, silently broadens `local_only`, or treats the
 no-model result as a full audit.
 
@@ -89,15 +89,15 @@ model_assistance:
     - id: local
       provider: openai_compatible
       base_url: http://127.0.0.1:11434/v1
-      model: ${AUTOHARNESS_LOCAL_MODEL}
+      model: ${AGENTHARNESS_LOCAL_MODEL}
       locality: local
     - id: groq_fast
       provider: groq
-      model: ${AUTOHARNESS_GROQ_MODEL}
+      model: ${AGENTHARNESS_GROQ_MODEL}
       locality: remote
     - id: hf_backup
       provider: huggingface
-      model: ${AUTOHARNESS_HF_MODEL}
+      model: ${AGENTHARNESS_HF_MODEL}
       locality: remote
   deadlines:
     attempt_seconds: 8
@@ -199,4 +199,4 @@ that unapproved destinations receive zero requests.
 
 ## Dependency Choice
 
-The bootstrap includes `groq`, `huggingface-hub`, `openai`, and `httpx`. Do not add a broad model-routing framework until measured adapter duplication justifies it; an extra abstraction can obscure provider error and capability semantics that AutoHarness needs to audit accurately.
+The bootstrap includes `groq`, `huggingface-hub`, `openai`, and `httpx`. Do not add a broad model-routing framework until measured adapter duplication justifies it; an extra abstraction can obscure provider error and capability semantics that AgentHarness needs to audit accurately.

@@ -28,7 +28,7 @@ cp .env.example .env
 Default (Phase 0):
 
 ```text
-AUTOHARNESS_MODEL_PROVIDER=disabled
+AGENTHARNESS_MODEL_PROVIDER=disabled
 ```
 
 This is intentional. Only model-assisted tests need a configured provider.
@@ -58,13 +58,14 @@ uv run pytest
 
 Phase documents add targeted commands and acceptance checks.
 For CI scan gates and artifact upload examples, see [CI usage](ci.md).
+For a plain-language end-to-end alpha validation path, see the [V1 test guide](v1-test.md).
 
 ## Local Scan Smoke
 
 ```bash
-uv run harness scan tests/fixtures/repositories/basic_agent --output /tmp/autoharness-basic.json
-uv run harness scan tests/fixtures/repositories/edge_cases --output /tmp/autoharness-edge.json
-uv run harness scan tests/fixtures/repositories/unsupported_text --output /tmp/autoharness-unsupported.json
+uv run harness scan tests/fixtures/repositories/basic_agent --output /tmp/agentharness-basic.json
+uv run harness scan tests/fixtures/repositories/edge_cases --output /tmp/agentharness-edge.json
+uv run harness scan tests/fixtures/repositories/unsupported_text --output /tmp/agentharness-unsupported.json
 ```
 
 The scan command is read-only with respect to target code execution: it inventories files and parses
@@ -75,18 +76,18 @@ Python source as data. It writes only the requested report artifact.
 Phase 4 apply requires an explicitly approved plan artifact. Preview first:
 
 ```bash
-uv run harness apply .autoharness/plan.json --dry-run --output .autoharness/apply-preview.json
+uv run harness apply .agentharness/plan.json --dry-run --output .agentharness/apply-preview.json
 ```
 
 Then apply non-interactively only when the preview is acceptable:
 
 ```bash
-uv run harness apply .autoharness/plan.json --yes --output .autoharness/apply-preview.json
+uv run harness apply .agentharness/plan.json --yes --output .agentharness/apply-preview.json
 ```
 
-The preview writes staged generated files under `.autoharness/staging/` and emits a canonical JSON
+The preview writes staged generated files under `.agentharness/staging/` and emits a canonical JSON
 manifest. Confirmed apply writes approved generated files, records a transaction journal under
-`.autoharness/transactions/`, and rolls back files written earlier in the transaction if a later
+`.agentharness/transactions/`, and rolls back files written earlier in the transaction if a later
 write fails. Reapply preserves append-only edits after the generated base and stops with a
 conflict when edits are made inside the generated base region.
 
@@ -95,9 +96,9 @@ conflict when edits are made inside the generated base region.
 Build the sandbox image before running sandbox-backed verification:
 
 ```bash
-docker build -f Dockerfile.sandbox -t autoharness-sandbox:dev .
-uv run harness verify . --output .autoharness/verify.json
-uv run harness verify . --format json --output .autoharness/verify.json
+docker build -f Dockerfile.sandbox -t agentharness-sandbox:dev .
+uv run harness verify . --output .agentharness/verify.json
+uv run harness verify . --format json --output .agentharness/verify.json
 ```
 
 Verification uses a disposable workspace, fixture runtime failures, denied-network sandbox checks,
@@ -127,12 +128,12 @@ providers or sending repository evidence.
 
 ## Docker Application Image
 
-The root Dockerfile packages the AutoHarness CLI itself:
+The root Dockerfile packages the AgentHarness CLI itself:
 
 ```bash
-docker build -t autoharness:dev .
-docker run --rm autoharness:dev --help
-docker run --rm autoharness:dev --version
+docker build -t agentharness:dev .
+docker run --rm agentharness:dev --help
+docker run --rm agentharness:dev --version
 ```
 
 It follows the UV Docker pattern of copying the UV binary from its official image, installing requirements in a cacheable layer, and running as a non-root user.
@@ -141,20 +142,20 @@ It follows the UV Docker pattern of copying the UV binary from its official imag
 
 ```bash
 docker compose build
-docker compose run --rm autoharness --help
+docker compose run --rm agentharness --help
 ```
 
 The repository is mounted read-only and the service drops Linux capabilities. Provider variables are forwarded only when they exist in the local environment.
 
-This Compose service is for the AutoHarness application. It is not the untrusted target-code sandbox specified in Phase 6.
+This Compose service is for the AgentHarness application. It is not the untrusted target-code sandbox specified in Phase 6.
 
 ## Docker Sandbox Image
 
-Phase 6 adds a separate target-execution image. Build it independently from the AutoHarness
+Phase 6 adds a separate target-execution image. Build it independently from the AgentHarness
 application image:
 
 ```bash
-docker build -f Dockerfile.sandbox -t autoharness-sandbox:dev .
+docker build -f Dockerfile.sandbox -t agentharness-sandbox:dev .
 uv run harness doctor --format json
 ```
 

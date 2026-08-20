@@ -47,7 +47,7 @@ When a run fails, the developer can tell whether the provider, model response, t
 ## Detailed Codex Prompt
 
 ```text
-You are the lead engineer implementing AutoHarness Phase 5: runtime reliability controls.
+You are the lead engineer implementing AgentHarness Phase 5: runtime reliability controls.
 
 Act as:
 1. A senior reliability engineer who understands distributed failure, idempotency, ambiguous commit state, retry budgets, structured telemetry, and failure injection.
@@ -98,7 +98,7 @@ Run all phase gates and update runtime/security docs. Append the completion reco
 
 ### 2026-07-16 Initial Runtime Core Slice
 
-- Added `src/autoharness/runtime.py` with versioned `RuntimeEvent` JSONL payloads, normalized
+- Added `src/agentharness/runtime.py` with versioned `RuntimeEvent` JSONL payloads, normalized
   runtime statuses and failure kinds, side-effect classifications, attempt ledger entries, and a
   deterministic retry executor with injected clock and random source.
 - Runtime JSONL writing redacts prompt/raw/header/env/secret-like keys and secret-like values,
@@ -131,12 +131,12 @@ providers, and the final Phase 5 completion record.
 - Added `HumanFailureSummary` output with terminal status, cause, attempts, elapsed time,
   side-effect state, evidence artifact path, and a next action.
 - Updated the constrained direct-provider templates to generate:
-  - `.autoharness/generated/autoharness_config.py` with runtime retry policy defaults.
-  - `.autoharness/generated/autoharness_jsonl_logger.py` with redacted JSONL write/read helpers.
-  - `.autoharness/generated/autoharness_runner.py` with a fake-provider-friendly
+  - `.agentharness/generated/agentharness_config.py` with runtime retry policy defaults.
+  - `.agentharness/generated/agentharness_jsonl_logger.py` with redacted JSONL write/read helpers.
+  - `.agentharness/generated/agentharness_runner.py` with a fake-provider-friendly
     `run_direct_provider` wrapper that logs run/model/retry/finish events, applies bounded
     read-only retries, returns a human summary, and emits a correction packet for malformed output.
-  - `.autoharness/generated/tests/test_autoharness_smoke.py` with generated fake-provider tests
+  - `.agentharness/generated/tests/test_agentharness_smoke.py` with generated fake-provider tests
     for rate-limit retry and malformed-output correction.
 - Added repository tests that apply the generated files, import the generated runner, execute it
   against fake providers, assert deterministic retry sleeps, validate redacted JSONL evidence, and
@@ -146,24 +146,24 @@ providers, and the final Phase 5 completion record.
   - `uv run ruff format --check .`
   - `uv run mypy src`
   - `uv run pytest` (102 tests)
-- Docker acceptance is still pending because `docker build -t autoharness:dev .` failed before
+- Docker acceptance is still pending because `docker build -t agentharness:dev .` failed before
   build start: the Docker daemon socket did not exist at
   `/Users/ayush/.docker/run/docker.sock`.
 
 Still pending before the final Phase 5 completion record: rerun the Docker build and
-`docker run --rm autoharness:dev --help` after Docker is available.
+`docker run --rm agentharness:dev --help` after Docker is available.
 
 ### 2026-07-17 Phase 5 Completion
 
 - Re-ran the full local quality gate after the Docker daemon became available.
-- Confirmed the AutoHarness application image builds and starts as a non-root CLI package image.
+- Confirmed the AgentHarness application image builds and starts as a non-root CLI package image.
 - Acceptance commands passed:
   - `uv run ruff check .`
   - `uv run ruff format --check .`
   - `uv run mypy src`
   - `uv run pytest` (102 tests)
-  - `docker build -t autoharness:dev .`
-  - `docker run --rm autoharness:dev --help`
+  - `docker build -t agentharness:dev .`
+  - `docker run --rm agentharness:dev --help`
 - Known limitations:
   - Runtime reliability covers the generated direct-provider fixture and deterministic fake
     providers. Broader framework adapters remain later-phase work.

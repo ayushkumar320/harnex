@@ -3,12 +3,12 @@ from pathlib import Path
 
 import pytest
 
-from autoharness.model_findings import (
+from agentharness.model_findings import (
     ModelFindingCandidate,
     synthesize_model_findings,
     validate_model_finding_candidates,
 )
-from autoharness.providers import (
+from agentharness.providers import (
     DataPolicy,
     FakeModelProvider,
     ModelResponse,
@@ -18,9 +18,9 @@ from autoharness.providers import (
     RouteEntry,
     RouterConfig,
 )
-from autoharness.retrieval_models import EvidenceBundle, RetrievedEvidence
-from autoharness.scan import scan_repository
-from autoharness.scan_models import StructuralFact
+from agentharness.retrieval_models import EvidenceBundle, RetrievedEvidence
+from agentharness.scan import scan_repository
+from agentharness.scan_models import StructuralFact
 
 
 def test_model_finding_validator_accepts_catalog_rule_with_existing_evidence() -> None:

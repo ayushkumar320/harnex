@@ -3,10 +3,10 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from autoharness.cli import app
-from autoharness.planning import ModelPlanActionCandidate, validate_model_plan_action_candidates
-from autoharness.reporter import write_report
-from autoharness.scan import scan_repository
+from agentharness.cli import app
+from agentharness.planning import ModelPlanActionCandidate, validate_model_plan_action_candidates
+from agentharness.reporter import write_report
+from agentharness.scan import scan_repository
 
 runner = CliRunner()
 
@@ -43,7 +43,7 @@ def run():
     assert payload == artifact
     assert payload["artifact_type"] == "harness_plan"
     assert payload["status"] == "review_required"
-    assert payload["actions"][0]["permission"] == "review_only"
+    assert payload["actions"][0]["permission"] == "write_generated_files"
     assert payload["actions"][0]["approval_state"] == "unresolved"
 
 
@@ -190,7 +190,7 @@ def run():
                 adapter="openai_compatible",
                 permission="write_generated_files",
                 files=["../agent.py"],
-                dependencies=["autoharness-runtime"],
+                dependencies=["agentharness-runtime"],
                 side_effect_classification="unknown",
                 verification=[],
                 approval_state="approved",

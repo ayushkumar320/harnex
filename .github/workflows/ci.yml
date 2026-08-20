@@ -24,5 +24,31 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run mypy src
       - run: uv run pytest
-      - run: docker build -t autoharness:phase-0 .
-      - run: docker run --rm autoharness:phase-0 --version
+      - run: docker build -t agentharness:ci .
+      - run: docker run --rm agentharness:ci --version
+
+  npm-wrapper:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.11.28"
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - run: node npm/test-python.js
+      - run: uv build
+      # Install the wrapper against the wheel built from this commit, because the
+      # version it normally pins is not on PyPI until the release job publishes it.
+      - name: Install wrapper from the local wheel
+        working-directory: npm
+        run: |
+          AGENTHARNESS_PYTHON_REQUIREMENT="$(ls ../dist/*.whl)" node install.js
+      - name: Smoke test the wrapper
+        run: |
+          node npm/bin/harness.js --version
+          node npm/bin/harness.js scan tests/fixtures/repositories/basic_agent --fail-on critical

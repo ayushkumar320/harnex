@@ -6,12 +6,12 @@
 
 ## User Experience Outcome
 
-The user immediately understands what was scanned, what was excluded, what AutoHarness found, and where the detailed report lives. Unknown areas are visible rather than treated as success.
+The user immediately understands what was scanned, what was excluded, what AgentHarness found, and where the detailed report lives. Unknown areas are visible rather than treated as success.
 
 ## Scope
 
 - Safe repository-root resolution and read-only `RepositoryView`.
-- Gitignore, AutoHarness ignore, binary, generated-file, size, and secret exclusions.
+- Gitignore, AgentHarness ignore, binary, generated-file, size, and secret exclusions.
 - Python inventory using `ast`; use LibCST only where precise location requires it.
 - Detection of Python functions, CLI candidates, direct model call candidates, broad retry loops, and shell/filesystem side-effect candidates.
 - Factual `StructuralFact` schema with source evidence and content hashes.
@@ -48,7 +48,7 @@ The user immediately understands what was scanned, what was excluded, what AutoH
 ## Detailed Codex Prompt
 
 ```text
-You are the lead engineer implementing AutoHarness Phase 1: the first genuinely useful product behavior.
+You are the lead engineer implementing AgentHarness Phase 1: the first genuinely useful product behavior.
 
 Operate as:
 1. A senior static-analysis engineer who distrusts dynamic execution and designs factual, testable scanners.
@@ -64,7 +64,7 @@ Before editing:
 Build `harness scan <path>` as a read-only deterministic pipeline:
 - Resolve and normalize a repository root without following paths outside it.
 - Create RepositoryInventory with included files, exclusions, reasons, hashes, language counts, and scan configuration.
-- Respect .gitignore plus a documented AutoHarness ignore file. Enforce binary and file-size limits.
+- Respect .gitignore plus a documented AgentHarness ignore file. Enforce binary and file-size limits.
 - Exclude likely secrets before content reaches scanners. Never include secret contents in verbose output.
 - Parse Python files as data. Never import modules, run setup, invoke plugins, or execute tests.
 - Emit typed StructuralFact records for functions, imports, call sites, exception/retry structures, CLI candidates, provider-call candidates, shell/process calls, filesystem writes, and unresolved dynamic patterns.
@@ -103,7 +103,7 @@ Run all Phase 0 and Phase 1 acceptance gates. Update architecture and user docs 
 
 - Delivered `harness scan <path>` as a deterministic, read-only structural scanner for Python
   repositories. The scanner inventories repository files, applies `.gitignore` and
-  `.autoharnessignore`, excludes secret paths/content, binary files, oversized files, generated
+  `.agentharnessignore`, excludes secret paths/content, binary files, oversized files, generated
   cache directories, and symlinks, and never imports or executes target code.
 - Added versioned Phase 1 scan schemas: `RepositoryInventory`, `StructuralFact`, `ParseFailure`,
   `ScanSummary`, and `AuditReport`.
@@ -119,8 +119,8 @@ Run all Phase 0 and Phase 1 acceptance gates. Update architecture and user docs 
 - Acceptance commands run successfully: `uv sync --all-extras --locked`,
   `uv run harness --help`, `uv run harness --version`, `uv run ruff check .`,
   `uv run ruff format --check .`, `uv run mypy src`, `uv run pytest` (25 tests),
-  `docker build -t autoharness:phase-0 .`, and
-  `docker run --rm autoharness:phase-0 --version`.
+  `docker build -t agentharness:phase-0 .`, and
+  `docker run --rm agentharness:phase-0 --version`.
 - Phase 1 scan smoke commands run successfully on:
   `tests/fixtures/repositories/basic_agent`,
   `tests/fixtures/repositories/edge_cases`, and

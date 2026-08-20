@@ -19,7 +19,7 @@ output or repository text to create permissions.
 
 ## Scope
 
-- Versioned `autoharness-policy.yaml` schema.
+- Versioned `agentharness-policy.yaml` schema.
 - Initial rule families for model timeouts, total attempts, fallback route, raw-content
   logging, secret redaction, side-effect idempotency, unrestricted shell/filesystem tools,
   support-tier minimums, and CI severity thresholds.
@@ -87,7 +87,7 @@ ci:
 ## Detailed Codex Prompt
 
 ```text
-You are the lead engineer implementing AutoHarness Next Phase N2: reliability policy as code.
+You are the lead engineer implementing AgentHarness Next Phase N2: reliability policy as code.
 
 Act as:
 1. A senior policy-engine engineer designing versioned, deterministic, explainable evaluation.

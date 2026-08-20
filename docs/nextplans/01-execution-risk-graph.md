@@ -2,7 +2,7 @@
 
 ## Product Outcome
 
-AutoHarness turns validated structural facts and findings into an evidence-linked execution
+AgentHarness turns validated structural facts and findings into an evidence-linked execution
 graph and accessible HTML report, helping developers understand where models, retries,
 tools, data, and side effects interact.
 
@@ -76,7 +76,7 @@ as an absent path.
 ## Detailed Codex Prompt
 
 ```text
-You are the lead engineer implementing AutoHarness Next Phase N1: execution-risk graph and HTML report.
+You are the lead engineer implementing AgentHarness Next Phase N1: execution-risk graph and HTML report.
 
 Act as:
 1. A senior static-analysis engineer designing explainable graph semantics from incomplete evidence.

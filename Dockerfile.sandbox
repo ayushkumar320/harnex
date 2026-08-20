@@ -8,4 +8,4 @@ RUN groupadd --system sandbox \
 WORKDIR /workspace/source
 USER 65532:65532
 
-CMD ["/usr/local/bin/python", "-I", "-c", "print('autoharness sandbox image ready')"]
+CMD ["/usr/local/bin/python", "-I", "-c", "print('agentharness sandbox image ready')"]

@@ -10,7 +10,7 @@
 | Side effects | Shell/process and filesystem-write candidates |
 | Generation | Approved direct-provider fixture templates only |
 | Runtime reliability | Fake-provider deterministic retry, redaction, and side-effect tests |
-| Sandbox | Local Docker backend with separate `autoharness-sandbox:dev` image |
+| Sandbox | Local Docker backend with separate `agentharness-sandbox:dev` image |
 | Verification | Disposable workspace, fake credentials, denied-network sandbox smoke |
 | Benchmark | 10 labeled fixture repositories with held-out cases |
 

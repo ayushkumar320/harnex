@@ -11,7 +11,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY requirements.txt pyproject.toml README.md ./
+COPY requirements.txt pyproject.toml README.md LICENSE ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv /opt/venv \
     && uv pip install -r requirements.txt \
@@ -27,13 +27,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     VIRTUAL_ENV=/opt/venv \
     PATH="/opt/venv/bin:$PATH"
 
-RUN groupadd --system autoharness \
-    && useradd --system --gid autoharness --create-home autoharness
+RUN groupadd --system agentharness \
+    && useradd --system --gid agentharness --create-home agentharness
 
 COPY --from=builder /opt/venv /opt/venv
 
 WORKDIR /workspace
 
-USER autoharness
+USER agentharness
 ENTRYPOINT ["harness"]
 CMD ["--help"]

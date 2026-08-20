@@ -10,4 +10,7 @@ __pycache__/
 htmlcov/
 dist/
 *.egg-info/
-.autoharness/
+.agentharness/
+npm/.venv/
+npm/node_modules/
+npm/*.tgz

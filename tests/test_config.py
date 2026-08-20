@@ -2,14 +2,14 @@ from pathlib import Path
 
 import pytest
 
-from autoharness.config import ConfigOverrides, load_config
-from autoharness.errors import ConfigurationError
+from agentharness.config import ConfigOverrides, load_config
+from agentharness.errors import ConfigurationError
 
 
 def test_defaults_do_not_require_provider_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in (
-        "AUTOHARNESS_OUTPUT_FORMAT",
-        "AUTOHARNESS_MODEL_PROVIDER",
+        "AGENTHARNESS_OUTPUT_FORMAT",
+        "AGENTHARNESS_MODEL_PROVIDER",
         "GROQ_API_KEY",
         "HF_TOKEN",
         "OPENAI_COMPATIBLE_API_KEY",
@@ -25,7 +25,7 @@ def test_defaults_do_not_require_provider_credentials(monkeypatch: pytest.Monkey
 def test_configuration_precedence_flags_env_file_defaults(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    config_file = tmp_path / "autoharness.yaml"
+    config_file = tmp_path / "agentharness.yaml"
     config_file.write_text(
         """
 output_format: human
@@ -34,7 +34,7 @@ telemetry_enabled: true
 """,
         encoding="utf-8",
     )
-    monkeypatch.setenv("AUTOHARNESS_OUTPUT_FORMAT", "json")
+    monkeypatch.setenv("AGENTHARNESS_OUTPUT_FORMAT", "json")
 
     config = load_config(
         ConfigOverrides(
@@ -52,7 +52,7 @@ telemetry_enabled: true
 def test_invalid_environment_value_names_field_and_source(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("AUTOHARNESS_OUTPUT_FORMAT", "xml")
+    monkeypatch.setenv("AGENTHARNESS_OUTPUT_FORMAT", "xml")
 
     with pytest.raises(ConfigurationError) as exc_info:
         load_config()
@@ -73,7 +73,7 @@ def test_missing_config_file_is_user_facing_error(tmp_path: Path) -> None:
 
 
 def test_phase_two_route_config_loads_from_file(tmp_path: Path) -> None:
-    config_file = tmp_path / "autoharness.yaml"
+    config_file = tmp_path / "agentharness.yaml"
     config_file.write_text(
         """
 model_assistance:
@@ -105,9 +105,9 @@ web_evidence:
 
 
 def test_legacy_provider_env_builds_route_without_yaml(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AUTOHARNESS_MODEL_PROVIDER", "openai_compatible")
+    monkeypatch.setenv("AGENTHARNESS_MODEL_PROVIDER", "openai_compatible")
     monkeypatch.setenv("OPENAI_COMPATIBLE_BASE_URL", "http://127.0.0.1:11434/v1")
-    monkeypatch.setenv("AUTOHARNESS_OPENAI_COMPATIBLE_MODEL", "local-demo")
+    monkeypatch.setenv("AGENTHARNESS_OPENAI_COMPATIBLE_MODEL", "local-demo")
 
     config = load_config()
 
@@ -118,7 +118,7 @@ def test_legacy_provider_env_builds_route_without_yaml(monkeypatch: pytest.Monke
 
 
 def test_route_config_rejects_duplicate_ids(tmp_path: Path) -> None:
-    config_file = tmp_path / "autoharness.yaml"
+    config_file = tmp_path / "agentharness.yaml"
     config_file.write_text(
         """
 model_assistance:

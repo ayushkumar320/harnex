@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from autoharness.runtime import (
+from agentharness.runtime import (
     RetryPolicy,
     RuntimeEvent,
     RuntimeEventType,

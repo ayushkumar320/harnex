@@ -1,7 +1,7 @@
 from typer.testing import CliRunner
 
-from autoharness import __version__
-from autoharness.cli import app
+from agentharness import __version__
+from agentharness.cli import app
 
 runner = CliRunner()
 

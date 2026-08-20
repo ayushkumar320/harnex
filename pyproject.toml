@@ -3,11 +3,25 @@ requires = ["hatchling>=1.27,<2"]
 build-backend = "hatchling.build"
 
 [project]
-name = "autoharness"
-version = "0.0.0"
+name = "agentharness"
+dynamic = ["version"]
 description = "Reliability auditor and constrained harness generator for AI agent repositories"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Ayush Kumar", email = "ayushofficial85385@gmail.com" }]
+keywords = ["ai-agents", "reliability", "static-analysis", "audit", "llm", "sandbox"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: Security",
+  "Typing :: Typed",
+]
 dependencies = [
   "detect-secrets>=1.5,<2",
   "groq>=0.31,<1",
@@ -30,8 +44,14 @@ dependencies = [
   "typer>=0.16,<1",
 ]
 
+[project.urls]
+Homepage = "https://github.com/ayushkumar/agentharness"
+Repository = "https://github.com/ayushkumar/agentharness"
+Changelog = "https://github.com/ayushkumar/agentharness/blob/main/CHANGELOG.md"
+Issues = "https://github.com/ayushkumar/agentharness/issues"
+
 [project.scripts]
-harness = "autoharness.cli:app"
+harness = "agentharness.cli:app"
 
 [project.optional-dependencies]
 dev = [
@@ -45,8 +65,14 @@ dev = [
   "types-PyYAML>=6.0,<7",
 ]
 
+[tool.hatch.version]
+path = "src/agentharness/__init__.py"
+
 [tool.hatch.build.targets.wheel]
-packages = ["src/autoharness"]
+packages = ["src/agentharness"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/agentharness", "README.md", "CHANGELOG.md", "LICENSE", "SECURITY.md"]
 
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers"
@@ -54,7 +80,7 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 branch = true
-source = ["autoharness"]
+source = ["agentharness"]
 
 [tool.coverage.report]
 show_missing = true
@@ -71,4 +97,4 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-packages = ["autoharness"]
+packages = ["agentharness"]
