@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from autoharness.errors import AutoHarnessError
-from autoharness.sandbox import (
+from agentharness.errors import AgentHarnessError
+from agentharness.sandbox import (
     DockerSandboxBackend,
     SandboxCommandResult,
     SandboxRequest,
@@ -46,7 +46,7 @@ def test_docker_sandbox_builds_denied_by_default_command(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("autoharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
+    monkeypatch.setattr("agentharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
     source = tmp_path / "source"
     output = tmp_path / "output"
     tmp = tmp_path / "tmp"
@@ -65,7 +65,7 @@ def test_docker_sandbox_builds_denied_by_default_command(
             output_dir=output,
             tmp_dir=tmp,
             command=["python", "-c", "print('ok')"],
-            env={"AUTOHARNESS_RUN_ID": "run-1"},
+            env={"AGENTHARNESS_RUN_ID": "run-1"},
             resources=SandboxResources(cpus=0.5, memory_mb=128, pids_limit=32),
         )
     )
@@ -82,19 +82,19 @@ def test_docker_sandbox_builds_denied_by_default_command(
     assert f"type=bind,src={source.resolve()},dst=/workspace/source,readonly" in command
     assert f"type=bind,src={output.resolve()},dst=/workspace/output" in command
     assert f"type=bind,src={tmp.resolve()},dst=/workspace/tmp" in command
-    assert "AUTOHARNESS_RUN_ID=run-1" in command
+    assert "AGENTHARNESS_RUN_ID=run-1" in command
 
 
 def test_sandbox_fails_closed_when_docker_daemon_unavailable(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("autoharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
+    monkeypatch.setattr("agentharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
     source = tmp_path / "source"
     source.mkdir()
     runner = FakeRunner([FakeCompleted(returncode=1, stderr="cannot connect")])
 
-    with pytest.raises(AutoHarnessError) as error:
+    with pytest.raises(AgentHarnessError) as error:
         DockerSandboxBackend(runner=runner).run(
             SandboxRequest(
                 source_root=source,
@@ -111,7 +111,7 @@ def test_sandbox_fails_closed_when_sandbox_image_is_missing(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("autoharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
+    monkeypatch.setattr("agentharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
     source = tmp_path / "source"
     source.mkdir()
     runner = FakeRunner(
@@ -121,7 +121,7 @@ def test_sandbox_fails_closed_when_sandbox_image_is_missing(
         ]
     )
 
-    with pytest.raises(AutoHarnessError) as error:
+    with pytest.raises(AgentHarnessError) as error:
         DockerSandboxBackend(runner=runner).run(
             SandboxRequest(
                 source_root=source,
@@ -137,7 +137,7 @@ def test_sandbox_rejects_writable_paths_inside_source(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("autoharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
+    monkeypatch.setattr("agentharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
     source = tmp_path / "source"
     source.mkdir()
     runner = FakeRunner(
@@ -147,7 +147,7 @@ def test_sandbox_rejects_writable_paths_inside_source(
         ]
     )
 
-    with pytest.raises(AutoHarnessError) as error:
+    with pytest.raises(AgentHarnessError) as error:
         DockerSandboxBackend(runner=runner).run(
             SandboxRequest(
                 source_root=source,
@@ -163,7 +163,7 @@ def test_sandbox_rejects_declared_symlink_writable_path_inside_source(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("autoharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
+    monkeypatch.setattr("agentharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
     source = tmp_path / "source"
     outside = tmp_path / "outside"
     source.mkdir()
@@ -180,7 +180,7 @@ def test_sandbox_rejects_declared_symlink_writable_path_inside_source(
         ]
     )
 
-    with pytest.raises(AutoHarnessError) as error:
+    with pytest.raises(AgentHarnessError) as error:
         DockerSandboxBackend(runner=runner).run(
             SandboxRequest(
                 source_root=source,
@@ -196,7 +196,7 @@ def test_sandbox_rejects_traversal_back_into_source(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("autoharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
+    monkeypatch.setattr("agentharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
     source = tmp_path / "source"
     source.mkdir()
     runner = FakeRunner(
@@ -206,7 +206,7 @@ def test_sandbox_rejects_traversal_back_into_source(
         ]
     )
 
-    with pytest.raises(AutoHarnessError) as error:
+    with pytest.raises(AgentHarnessError) as error:
         DockerSandboxBackend(runner=runner).run(
             SandboxRequest(
                 source_root=source,
@@ -222,7 +222,7 @@ def test_sandbox_rejects_secret_environment(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("autoharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
+    monkeypatch.setattr("agentharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
     source = tmp_path / "source"
     source.mkdir()
     runner = FakeRunner(
@@ -232,7 +232,7 @@ def test_sandbox_rejects_secret_environment(
         ]
     )
 
-    with pytest.raises(AutoHarnessError) as error:
+    with pytest.raises(AgentHarnessError) as error:
         DockerSandboxBackend(runner=runner).run(
             SandboxRequest(
                 source_root=source,
@@ -250,7 +250,7 @@ def test_sandbox_redacts_captured_output(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("autoharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
+    monkeypatch.setattr("agentharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
     source = tmp_path / "source"
     source.mkdir()
     runner = FakeRunner(
@@ -277,7 +277,7 @@ def test_sandbox_timeout_returns_timeout_result(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("autoharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
+    monkeypatch.setattr("agentharness.sandbox.shutil.which", lambda _: "/usr/bin/docker")
     source = tmp_path / "source"
     source.mkdir()
     runner = FakeRunner(

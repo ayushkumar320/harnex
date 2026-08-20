@@ -2,7 +2,7 @@
 
 ## Desired User Feeling
 
-AutoHarness handles repositories that may contain valuable work and dangerous tools. The emotional experience is therefore part of correctness.
+AgentHarness handles repositories that may contain valuable work and dangerous tools. The emotional experience is therefore part of correctness.
 
 The user should feel:
 
@@ -12,7 +12,7 @@ The user should feel:
 - **In control:** nothing is applied or executed without a clear transition and review.
 - **Productive:** the summary is concise and the next action is obvious.
 
-The user should not feel that they must understand AutoHarness internals to trust a result.
+The user should not feel that they must understand AgentHarness internals to trust a result.
 
 ## Primary Users
 
@@ -33,6 +33,15 @@ Needs source evidence, trust boundaries, capability claims, and proof that verif
 ### First scan
 
 The user runs:
+
+```bash
+harness audit .
+```
+
+`harness audit` is the read-only entry point. It runs the structural scan and the plan in one
+command, prints one line per stage with its status and artifact path, and ends with exactly one
+recommended next command. `harness scan .` remains available when only the scan is wanted, and it
+behaves as described below.
 
 ```bash
 harness scan .
@@ -76,7 +85,7 @@ Example:
 AH-R201  Unsafe retry after an unknown side effect                 HIGH
 
 agent/email.py:42 calls send_message() inside a broad retry loop.
-AutoHarness cannot prove whether a timed-out call committed the send.
+AgentHarness cannot prove whether a timed-out call committed the send.
 
 Support: detected     Confidence: 0.91     Generation: blocked
 Next: annotate the adapter as idempotent with a stable key, or exclude this call.
@@ -96,7 +105,7 @@ The plan shows permissions and dependencies before implementation details. Unkno
 
 ### Applying changes
 
-Before mutation, the user sees a concise diff summary and the exact files that will change. AutoHarness refuses to continue if the plan is stale or user-edited generated files cannot be merged safely.
+Before mutation, the user sees a concise diff summary and the exact files that will change. AgentHarness refuses to continue if the plan is stale or user-edited generated files cannot be merged safely.
 
 After application, the user receives the rollback path and verification command.
 
@@ -136,7 +145,7 @@ Human output is concise and prioritized. Machine output uses a versioned JSON sc
 
 ```bash
 harness scan . --format human
-harness scan . --format json --output .autoharness/scan.json
+harness scan . --format json --output .agentharness/scan.json
 ```
 
 Both modes represent the same findings. Human output must not invent summaries that are absent from JSON.

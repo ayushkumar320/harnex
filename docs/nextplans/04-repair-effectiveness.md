@@ -2,7 +2,7 @@
 
 ## Product Outcome
 
-For supported repair families, AutoHarness compares original and approved repaired behavior
+For supported repair families, AgentHarness compares original and approved repaired behavior
 under identical controlled scenarios and reports whether reliability improved, regressed, or
 remained inconclusive.
 
@@ -71,7 +71,7 @@ before/after result before trusting the change.
 ## Detailed Codex Prompt
 
 ```text
-You are the lead engineer implementing AutoHarness Next Phase N4: repair effectiveness measurement.
+You are the lead engineer implementing AgentHarness Next Phase N4: repair effectiveness measurement.
 
 Act as:
 1. A senior experimental-systems engineer designing controlled paired comparisons and reproducible metrics.

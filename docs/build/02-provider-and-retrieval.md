@@ -2,7 +2,7 @@
 
 ## Product Outcome
 
-AutoHarness can run its LLM reasoning core through Groq, Hugging Face, or a generic OpenAI-compatible endpoint, combine local documentation with budgeted Tavily evidence, and clearly degrade to structural inventory when no model is available.
+AgentHarness can run its LLM reasoning core through Groq, Hugging Face, or a generic OpenAI-compatible endpoint, combine local documentation with budgeted Tavily evidence, and clearly degrade to structural inventory when no model is available.
 
 ## User Experience Outcome
 
@@ -61,7 +61,7 @@ The user knows whether any repository content may leave the machine, sees which 
 ## Detailed Codex Prompt
 
 ```text
-You are the lead engineer implementing AutoHarness Phase 2.
+You are the lead engineer implementing AgentHarness Phase 2.
 
 Work simultaneously as:
 1. A senior distributed-systems and LLM-integration engineer who normalizes provider differences, bounded retries, capabilities, privacy, and failure semantics.

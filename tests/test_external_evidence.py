@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from autoharness.external_evidence import (
+from agentharness.external_evidence import (
     EvidenceExtractRequest,
     EvidenceSearchRequest,
     FakeExternalEvidenceProvider,

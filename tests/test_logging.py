@@ -1,4 +1,4 @@
-from autoharness.logging import redact_event
+from agentharness.logging import redact_event
 
 
 def test_redacts_secret_like_keys_and_values() -> None:

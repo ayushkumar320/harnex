@@ -1,5 +1,5 @@
-from autoharness.evidence_validation import CitedModelOutput, validate_citations
-from autoharness.retrieval_models import EvidenceBundle, RetrievedEvidence
+from agentharness.evidence_validation import CitedModelOutput, validate_citations
+from agentharness.retrieval_models import EvidenceBundle, RetrievedEvidence
 
 
 def test_validate_citations_rejects_missing_evidence_ids() -> None:

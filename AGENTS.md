@@ -1,10 +1,10 @@
-# AutoHarness Agent Contract
+# AgentHarness Agent Contract
 
-This file governs every human or coding-agent contribution to AutoHarness. Read it before changing code, tests, infrastructure, prompts, or documentation.
+This file governs every human or coding-agent contribution to AgentHarness. Read it before changing code, tests, infrastructure, prompts, or documentation.
 
 ## Mission
 
-Build a trustworthy reliability auditor for AI agent repositories. AutoHarness must explain what it found, show the evidence, communicate uncertainty, and generate changes only through verified adapters and explicit review.
+Build a trustworthy reliability auditor for AI agent repositories. AgentHarness must explain what it found, show the evidence, communicate uncertainty, and generate changes only through verified adapters and explicit review.
 
 The project principle is **audit first, generate second**.
 
@@ -65,7 +65,7 @@ The user should feel:
 
 - **Safe:** scans are read-only and side effects require explicit approval.
 - **Oriented:** each result says what was inspected, what was skipped, and what happens next.
-- **Respected:** AutoHarness does not pretend uncertainty is certainty.
+- **Respected:** AgentHarness does not pretend uncertainty is certainty.
 - **In control:** plans and diffs are reviewable; generated changes are reversible.
 - **Productive:** common supported repositories receive useful results quickly.
 
@@ -99,7 +99,7 @@ CLI output must use plain language, stable terminology, restrained color, and me
 The target structure is:
 
 ```text
-src/autoharness/        application package
+src/agentharness/        application package
 tests/                  unit, contract, integration, and fixture tests
 docs/product/           product intent and user experience
 docs/architecture/      system contracts and security design
@@ -132,8 +132,8 @@ uv run ruff check .
 uv run ruff format --check .
 uv run mypy src
 uv run pytest
-docker build -t autoharness:dev .
-docker run --rm autoharness:dev --help
+docker build -t agentharness:dev .
+docker run --rm agentharness:dev --help
 ```
 
 If a phase changes these commands, update this file, the README, and the development setup together.

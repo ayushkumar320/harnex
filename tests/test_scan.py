@@ -6,15 +6,15 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from autoharness.cli import app
-from autoharness.external_evidence import (
+from agentharness.cli import app
+from agentharness.external_evidence import (
     FakeExternalEvidenceProvider,
     FileExternalEvidenceCache,
     WebEvidenceConfig,
     external_evidence,
 )
-from autoharness.reporter import canonical_json
-from autoharness.scan import scan_repository
+from agentharness.reporter import canonical_json
+from agentharness.scan import scan_repository
 
 runner = CliRunner()
 FIXTURES = Path(__file__).parent / "fixtures" / "repositories"
@@ -111,10 +111,10 @@ def test_symlink_escape_and_secrets_are_excluded(tmp_path: Path) -> None:
     assert "PRIVATE KEY" not in report_json
 
 
-def test_gitignore_and_autoharness_ignore_are_respected(tmp_path: Path) -> None:
+def test_gitignore_and_agentharness_ignore_are_respected(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     write(repo / ".gitignore", "ignored.py\n")
-    write(repo / ".autoharnessignore", "local_only.py\n")
+    write(repo / ".agentharnessignore", "local_only.py\n")
     write(repo / "ignored.py", "def ignored():\n    return 1\n")
     write(repo / "local_only.py", "def local():\n    return 1\n")
     write(repo / "agent.py", "def ok():\n    return 1\n")
@@ -124,7 +124,7 @@ def test_gitignore_and_autoharness_ignore_are_respected(tmp_path: Path) -> None:
     included = {item.path for item in report.repository.included_files}
 
     assert excluded["ignored.py"] == "gitignore"
-    assert excluded["local_only.py"] == "autoharness_ignore"
+    assert excluded["local_only.py"] == "agentharness_ignore"
     assert "agent.py" in included
 
 
@@ -150,7 +150,7 @@ def test_cli_human_and_json_share_counts(tmp_path: Path) -> None:
     assert machine.exit_code == 0
     payload = json.loads(machine.output)
     artifact = json.loads(output.read_text(encoding="utf-8"))
-    assert "AutoHarness scan is read-only" in human.output
+    assert "AgentHarness scan is read-only" in human.output
     assert "Included files" in human.output
     assert "Findings" in human.output
     assert payload["summary"] == artifact["summary"]
@@ -255,7 +255,7 @@ def test_cli_online_json_reports_evidence_bundle(tmp_path: Path) -> None:
 def test_scan_suppression_is_visible_but_not_counted_active(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     write(
-        repo / ".autoharness" / "suppressions.yml",
+        repo / ".agentharness" / "suppressions.yml",
         """
 suppressions:
   - rule_id: AH-S101
@@ -351,7 +351,7 @@ def test_online_scan_default_cache_does_not_write_target_repository(
     write(repo / "README.md", "# Agent\n\nUses OpenAI docs.\n")
     write(repo / "agent.py", "def run():\n    return None\n")
     cache_home = tmp_path / "cache-home"
-    monkeypatch.setenv("AUTOHARNESS_CACHE_DIR", str(cache_home))
+    monkeypatch.setenv("AGENTHARNESS_CACHE_DIR", str(cache_home))
     evidence = external_evidence(
         url="https://platform.openai.com/docs",
         title="OpenAI Docs",
@@ -369,5 +369,5 @@ def test_online_scan_default_cache_does_not_write_target_repository(
     )
 
     assert report.evidence_bundle is not None
-    assert not (repo / ".autoharness").exists()
+    assert not (repo / ".agentharness").exists()
     assert (cache_home / "external-evidence").is_dir()

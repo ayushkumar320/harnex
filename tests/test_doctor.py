@@ -3,7 +3,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from autoharness.cli import app
+from agentharness.cli import app
 
 runner = CliRunner()
 
@@ -13,7 +13,7 @@ def test_doctor_reports_missing_credentials_without_provider_calls(
     monkeypatch,
 ) -> None:
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
-    config = tmp_path / "autoharness.yaml"
+    config = tmp_path / "agentharness.yaml"
     config.write_text(
         """
 model_assistance:

@@ -1,13 +1,13 @@
 # Security Policy
 
-AutoHarness is an alpha-stage reliability auditor. Please report security issues privately before
+AgentHarness is an alpha-stage reliability auditor. Please report security issues privately before
 public disclosure.
 
 ## Supported Versions
 
 | Version | Support |
 | --- | --- |
-| `0.0.0-alpha` | Security fixes accepted for the alpha code line |
+| `0.1.0a1` | Security fixes accepted for the alpha code line |
 
 ## Reporting
 
@@ -27,4 +27,4 @@ Do not include real credentials. Use fixture tokens such as `sk-redacted-test-to
 - The Docker sandbox backend fails closed when Docker or the sandbox image is unavailable.
 - Verification separates deterministic controls from draft semantic evals.
 
-AutoHarness does not claim that a scanned repository is production-safe.
+AgentHarness does not claim that a scanned repository is production-safe.

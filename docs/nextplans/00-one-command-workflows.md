@@ -2,7 +2,7 @@
 
 ## Product Outcome
 
-A new user gets the primary AutoHarness value through `harness audit .`, can request a safe
+A new user gets the primary AgentHarness value through `harness audit .`, can request a safe
 end-to-end remediation workflow through `harness improve .`, and can run a non-interactive
 policy check through `harness check .` without learning internal phase ordering.
 
@@ -76,7 +76,7 @@ orchestrate.
 ## Detailed Codex Prompt
 
 ```text
-You are the lead engineer implementing AutoHarness Next Phase N0: one-command workflows.
+You are the lead engineer implementing AgentHarness Next Phase N0: one-command workflows.
 
 Act as:
 1. A senior CLI and workflow engineer designing deterministic state machines, resumable artifacts, cancellation, and failure boundaries.
@@ -120,4 +120,41 @@ Run all standard and prerequisite gates. Update public onboarding only after rea
 
 ## Phase Completion Record
 
-Not started.
+Partially delivered on 2026-08-20 (minimum viable subset).
+
+Delivered behavior:
+
+- `harness audit <path>`: read-only scan and plan orchestration. No target-source writes and no
+  target-code execution.
+- `harness improve <path>`: scan, plan, plan approval, staged preview, apply approval, transactional
+  apply, and contained verification. `--yes` covers both approvals, `--skip-verify` records a
+  skipped verification stage.
+- `harness check <path> --fail-on <severity>`: non-interactive scan plus severity gate, exit `1`
+  when the threshold is reached.
+- `harness approve <plan>`: records explicit approval on the actions that already satisfy every
+  generation constraint. This closed the gap where `build_plan` only emitted `unresolved`
+  `review_only` actions, which made `harness apply` unreachable from a real plan.
+- Versioned `workflow_run` artifact (`.agentharness/workflow.json`) with per-stage status,
+  duration, artifact path, detail, and one next action. Human and JSON output render the same
+  artifact.
+- Commands call component functions directly; no CLI subprocesses.
+
+Commands and results:
+
+- `pytest -q`: 135 passed, including `tests/test_workflows.py` covering audit read-only behavior,
+  check pass/fail thresholds, declined plan approval, declined apply approval, a successful apply,
+  and approve accept/decline.
+- Manual run on `tests/fixtures/repositories/basic_agent`: `audit` completed, `check --fail-on high`
+  exited 1, `improve --yes` applied four generated files and verification passed with the sandbox
+  check reported as `not_exercised` on a host without Docker.
+- `ruff check`, `ruff format --check`, and `mypy src` pass.
+
+Known limitations and deferred work:
+
+- No artifact cache-reuse or freshness validator; read-only stages always recompute. Freshness is
+  still enforced by the underlying scan, plan, and apply checks.
+- No `--until`, `--from-artifact`, or `--non-interactive` flags. A non-interactive run without
+  `--yes` is treated as a refusal and exits `4`.
+- No optional model interpretation stage inside `audit`; the router remains opt-in through the
+  low-level commands.
+- `check` enforces severity thresholds only; policy evaluation waits for N2.

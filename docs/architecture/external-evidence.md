@@ -2,7 +2,7 @@
 
 ## Purpose
 
-AutoHarness is LLM-core, but model training data is not reliable for fast-changing SDKs, provider capabilities, migration guides, or error documentation. The external-evidence layer gives the LLM current, source-backed web context without turning arbitrary web content into authority.
+AgentHarness is LLM-core, but model training data is not reliable for fast-changing SDKs, provider capabilities, migration guides, or error documentation. The external-evidence layer gives the LLM current, source-backed web context without turning arbitrary web content into authority.
 
 Tavily is the first `ExternalEvidenceProvider`. It is separate from `ModelProvider`: Tavily retrieves evidence; Groq, Hugging Face, or a local model reasons over it.
 
@@ -55,7 +55,7 @@ Trust labels help ranking but never bypass untrusted-input handling.
 
 ### Search
 
-Use basic Search to discover current official pages for a precise package/version/symbol question. Set `include_answer=false`; AutoHarness's configured LLM is the reasoning core. Prefer `include_domains` over broad exclusion lists.
+Use basic Search to discover current official pages for a precise package/version/symbol question. Set `include_answer=false`; AgentHarness's configured LLM is the reasoning core. Prefer `include_domains` over broad exclusion lists.
 
 ### Extract
 
@@ -81,7 +81,7 @@ Do not use Tavily Research in normal scan or plan commands. Its dynamic credit c
 harness scan . --online
 ```
 
-After local scanning, AutoHarness may retrieve current official evidence for detected dependencies and unresolved API behavior. The report distinguishes local and external evidence and shows credits consumed.
+After local scanning, AgentHarness may retrieve current official evidence for detected dependencies and unresolved API behavior. The report distinguishes local and external evidence and shows credits consumed.
 
 ### Documentation snapshot
 
@@ -89,7 +89,7 @@ After local scanning, AutoHarness may retrieve current official evidence for det
 harness docs sync .
 ```
 
-The command detects supported dependencies, maps them to official domains, retrieves selected documentation, and stores a content-addressed snapshot under `.autoharness/cache/docs/` with a manifest.
+The command detects supported dependencies, maps them to official domains, retrieves selected documentation, and stores a content-addressed snapshot under `.agentharness/cache/docs/` with a manifest.
 
 ### Plan refresh
 

@@ -2,7 +2,7 @@
 
 ## Product Outcome
 
-AutoHarness exercises supported reliability controls against deterministic provider and tool
+AgentHarness exercises supported reliability controls against deterministic provider and tool
 failures inside the verified execution boundary and reports exactly what behavior was proven.
 
 ## User Problem
@@ -71,7 +71,7 @@ using production credentials or real side effects.
 ## Detailed Codex Prompt
 
 ```text
-You are the lead engineer implementing AutoHarness Next Phase N3: Failure Injection Lab.
+You are the lead engineer implementing AgentHarness Next Phase N3: Failure Injection Lab.
 
 Act as:
 1. A senior reliability-test engineer specializing in deterministic fault injection, distributed failure, and exact invariants.

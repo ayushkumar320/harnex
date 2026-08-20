@@ -15,7 +15,7 @@ This infrastructure is easy to omit because it is not the agent's headline featu
 
 ## The Vision
 
-AutoHarness is a reliability auditor first and a constrained generator second.
+AgentHarness is a reliability auditor first and a constrained generator second.
 
 It inspects an agent repository without executing it, identifies model calls, tool boundaries, entry points, external side effects, and missing reliability controls, and emits findings tied to source evidence. For verified patterns, it can propose a harness and apply a reviewed diff. Unsupported patterns remain useful findings rather than speculative code.
 
@@ -48,7 +48,7 @@ scan -> understand findings -> plan -> review -> apply -> verify -> monitor drif
 
 ## Differentiation
 
-Observability products explain instrumented runs. Sandbox products isolate execution. Agent frameworks provide framework-native execution controls. AutoHarness focuses on the repository-analysis layer that connects these concerns.
+Observability products explain instrumented runs. Sandbox products isolate execution. Agent frameworks provide framework-native execution controls. AgentHarness focuses on the repository-analysis layer that connects these concerns.
 
 It should integrate with, not compete with, established systems:
 
@@ -65,7 +65,7 @@ Every finding includes source location, rule or adapter, confidence, severity, a
 
 ### Unsupported is a valid result
 
-AutoHarness must say what it could not understand. Unknown side effects and unsupported adapters block generation but do not invalidate the audit.
+AgentHarness must say what it could not understand. Unknown side effects and unsupported adapters block generation but do not invalidate the audit.
 
 ### Reversibility
 
@@ -85,11 +85,11 @@ For fast-changing SDKs and providers, Tavily can supply current official documen
 
 ### Honest safety
 
-A generated policy is not an enforcement boundary. A passing smoke test is not proof of safety. AutoHarness reports exactly what was tested and what remains unverified.
+A generated policy is not an enforcement boundary. A passing smoke test is not proof of safety. AgentHarness reports exactly what was tested and what remains unverified.
 
 ## Long-Term Direction
 
-If the narrow MVP earns trust, AutoHarness can grow into:
+If the narrow MVP earns trust, AgentHarness can grow into:
 
 - A CI reliability policy that catches new unbounded calls or unsafe tools
 - A community adapter ecosystem with conformance tests

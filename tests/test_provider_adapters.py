@@ -3,13 +3,13 @@ from types import SimpleNamespace
 
 import pytest
 
-from autoharness.provider_adapters import (
+from agentharness.provider_adapters import (
     HuggingFaceProvider,
     OpenAICompatibleProvider,
     build_configured_providers,
     classify_provider_error,
 )
-from autoharness.providers import (
+from agentharness.providers import (
     DataPolicy,
     FailureKind,
     ModelRequest,

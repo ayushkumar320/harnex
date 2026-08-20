@@ -2,7 +2,7 @@
 
 ## Product Outcome
 
-AutoHarness converts structural facts into evidence-backed reliability findings and produces a reviewable plan for verified patterns. This completes the first useful audit-only product milestone.
+AgentHarness converts structural facts into evidence-backed reliability findings and produces a reviewable plan for verified patterns. This completes the first useful audit-only product milestone.
 
 ## User Experience Outcome
 
@@ -48,7 +48,7 @@ The user can answer: what is wrong, why it matters, where the evidence is, how c
 ## Detailed Codex Prompt
 
 ```text
-You are the lead engineer implementing AutoHarness Phase 3, the audit-only product milestone.
+You are the lead engineer implementing AgentHarness Phase 3, the audit-only product milestone.
 
 Act as:
 1. A senior static-analysis and policy-engine engineer designing stable, evidence-backed findings and versioned plans.
@@ -108,14 +108,14 @@ Do not begin generation. Run all gates, update public docs with the real finding
 - Extended scan artifacts with active finding counts, severity counts, detailed finding records,
   and visible suppression metadata. Suppressed findings remain in JSON and human summaries show
   the suppressed count.
-- Added `.autoharness/suppressions.yml` support with explicit rule, optional path, reason, and
+- Added `.agentharness/suppressions.yml` support with explicit rule, optional path, reason, and
   expiry metadata.
 - Added `harness scan --fail-on` for CI severity thresholds and exit code `1` when active
   findings meet the threshold.
 - Added read-only `harness plan` producing a versioned `HarnessPlan` from completed scan
   artifacts. Plans reject partial scans and never write target files.
 - Manual usability pass: `harness scan tests/fixtures/repositories/basic_agent` and
-  `harness plan /tmp/autoharness-basic-scan.json` clearly identified read-only behavior,
+  `harness plan /tmp/agentharness-basic-scan.json` clearly identified read-only behavior,
   finding counts, one high-impact finding, and one review-only unresolved plan action.
 - Acceptance commands for this slice passed: `uv run ruff check .`,
   `uv run ruff format --check .`, `uv run mypy src`, and `uv run pytest` (60 tests).
@@ -146,8 +146,8 @@ Do not begin generation. Run all gates, update public docs with the real finding
   - `uv run ruff format --check .`
   - `uv run mypy src`
   - `uv run pytest` (71 tests)
-  - `docker build -t autoharness:dev .`
-  - `docker run --rm autoharness:dev --help`
+  - `docker build -t agentharness:dev .`
+  - `docker run --rm agentharness:dev --help`
 - Known limitations deferred to later phases:
   - LLM-assisted finding and plan synthesis is implemented as guarded callable paths, not enabled
     by default CLI scan/plan commands.

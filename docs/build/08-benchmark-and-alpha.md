@@ -2,7 +2,7 @@
 
 ## Product Outcome
 
-AutoHarness reaches a public alpha with measured detection quality, reproducible installation, honest support claims, and a benchmark corpus that can guide future adapters.
+AgentHarness reaches a public alpha with measured detection quality, reproducible installation, honest support claims, and a benchmark corpus that can guide future adapters.
 
 ## User Experience Outcome
 
@@ -21,7 +21,7 @@ A new user can install, scan a supported repository, understand the result, and 
 
 ## Deliverables
 
-- `autoharness-bench` fixtures or clearly licensed benchmark location
+- `agentharness-bench` fixtures or clearly licensed benchmark location
 - Machine-readable benchmark results and concise report
 - Public support matrix
 - Locked and reproducible UV environment
@@ -50,7 +50,7 @@ A new user can install, scan a supported repository, understand the result, and 
 ## Detailed Codex Prompt
 
 ```text
-You are the lead engineer and release owner implementing AutoHarness Phase 8: benchmark and public alpha.
+You are the lead engineer and release owner implementing AgentHarness Phase 8: benchmark and public alpha.
 
 Operate as:
 1. A senior release, quality, and developer-tools engineer who values reproducibility, held-out evaluation, supply-chain integrity, and observable limitations.
@@ -104,7 +104,7 @@ Run the complete suite and reproducible builds. Update all public documentation 
 - Added fixture repositories under `tests/fixtures/benchmark/` covering direct provider calls,
   shell/process effects, filesystem writes, dynamic lookup, broad retry, prompt-injection prose,
   secret-like documentation, and syntax errors.
-- Added `src/autoharness/benchmark.py` and `harness benchmark` with versioned JSON and human
+- Added `src/agentharness/benchmark.py` and `harness benchmark` with versioned JSON and human
   summaries.
 - Added `docs/benchmark/alpha-results.json` with measured results.
 - Added public alpha docs:
@@ -124,8 +124,8 @@ Run the complete suite and reproducible builds. Update all public documentation 
 - Acceptance commands passed:
   - `uv run harness benchmark --format json --output docs/benchmark/alpha-results.json`
   - `uv run pytest tests/test_benchmark.py`
-  - `docker build -t autoharness:dev .`
-  - `docker run --rm autoharness:dev --help`
+  - `docker build -t agentharness:dev .`
+  - `docker run --rm agentharness:dev --help`
 - Known limitations:
   - Benchmark fixtures are purpose-built and small; broader public-repository benchmarking remains
     future work.

@@ -10,7 +10,7 @@ The first interaction feels intentional and dependable. `harness --help` explain
 
 ## Scope
 
-- Finalize Python package layout under `src/autoharness/`.
+- Finalize Python package layout under `src/agentharness/`.
 - Lock Python and dependency versions with UV.
 - Establish Typer CLI root, global options, output-mode primitives, and error boundary.
 - Define configuration precedence: flags -> environment -> config file -> defaults.
@@ -24,7 +24,7 @@ The first interaction feels intentional and dependable. `harness --help` explain
 
 - `uv.lock`
 - Package metadata and `harness` console script
-- `autoharness.cli`, configuration, error, and schema modules
+- `agentharness.cli`, configuration, error, and schema modules
 - Unit tests for config and CLI behavior
 - Container smoke test
 - Dependency synchronization check between `pyproject.toml` and requirements files
@@ -40,8 +40,8 @@ uv run ruff check .
 uv run ruff format --check .
 uv run mypy src
 uv run pytest
-docker build -t autoharness:phase-0 .
-docker run --rm autoharness:phase-0 --version
+docker build -t agentharness:phase-0 .
+docker run --rm agentharness:phase-0 --version
 ```
 
 The CLI must work with all provider variables unset. Help and error output must remain readable with `NO_COLOR=1`.
@@ -57,7 +57,7 @@ The CLI must work with all provider variables unset. Help and error output must 
 ## Detailed Codex Prompt
 
 ```text
-You are the lead engineer implementing AutoHarness Phase 0.
+You are the lead engineer implementing AgentHarness Phase 0.
 
 Adopt three responsibilities at once:
 1. Act as a senior Python platform engineer: create a minimal, typed, testable foundation with stable public boundaries and no speculative framework.
@@ -118,7 +118,7 @@ Do not mark the phase complete until the acceptance gates pass. Finish by updati
 - Acceptance commands run successfully: `uv sync --all-extras --locked`,
   `uv run harness --help`, `uv run harness --version`, `NO_COLOR=1 uv run harness --format xml`,
   `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy src`, and `uv run pytest`.
-- Container acceptance commands now pass: `docker build -t autoharness:phase-0 .` and
-  `docker run --rm autoharness:phase-0 --version`.
+- Container acceptance commands now pass: `docker build -t agentharness:phase-0 .` and
+  `docker run --rm agentharness:phase-0 --version`.
 - Deferred to later phases: repository scanning, provider routing, external evidence retrieval,
   generation, target-code execution, and sandbox enforcement.
