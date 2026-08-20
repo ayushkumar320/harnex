@@ -14,6 +14,7 @@ from agentharness.findings import (
     DETECTOR_VERSION as FINDING_DETECTOR_VERSION,
 )
 from agentharness.findings import (
+    Finding,
     derive_findings,
     finding_counts,
     load_suppressions,
@@ -189,3 +190,68 @@ def _count_facts(facts: list[StructuralFact]) -> dict[str, int]:
 def _sha256_json(payload: object) -> str:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return "sha256:" + hashlib.sha256(encoded).hexdigest()
+
+
+_SEVERITY_ORDER = ("critical", "high", "medium", "low")
+
+
+def render_markdown_report(report: AuditReport, *, repository_path: Path) -> str:
+    """Render active findings as a Markdown brief a coding agent can act on."""
+    findings = unsuppressed_findings(report.findings)
+    by_severity: dict[str, list[Finding]] = {level: [] for level in _SEVERITY_ORDER}
+    for finding in findings:
+        by_severity.setdefault(str(finding.severity), []).append(finding)
+
+    lines: list[str] = [
+        "# AgentHarness findings",
+        "",
+        f"Repository: `{repository_path}`",
+        f"Findings: {len(findings)} active "
+        + ", ".join(
+            f"{len(by_severity[level])} {level}"
+            for level in _SEVERITY_ORDER
+            if by_severity.get(level)
+        ),
+        "",
+        "Each finding below names a file and line, why it matters, and what to change. Work "
+        "through them highest severity first. Confirm each site before editing: these come from "
+        "static analysis and some may be intentional.",
+        "",
+    ]
+
+    if not findings:
+        lines.append("No active findings. Nothing to fix.")
+        return "\n".join(lines) + "\n"
+
+    for level in _SEVERITY_ORDER:
+        group = by_severity.get(level) or []
+        if not group:
+            continue
+        lines.append(f"## {level.capitalize()} ({len(group)})")
+        lines.append("")
+        for finding in group:
+            lines.append(f"### {finding.title}")
+            lines.append("")
+            lines.append(f"`{finding.rule_id}` · confidence {finding.confidence:.2f}")
+            lines.append("")
+            lines.append("Locations:")
+            lines.append("")
+            for item in finding.evidence:
+                location = item.path if item.line is None else f"{item.path}:{item.line}"
+                suffix = f" — `{item.symbol}`" if item.symbol else ""
+                lines.append(f"- `{location}`{suffix}")
+            lines.append("")
+            lines.append(f"**What it is:** {finding.description}")
+            lines.append("")
+            lines.append(f"**Why it matters:** {finding.impact}")
+            lines.append("")
+            lines.append(f"**What to change:** {finding.remediation}")
+            lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def write_markdown_report(path: Path, report: AuditReport, *, repository_path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        render_markdown_report(report, repository_path=repository_path), encoding="utf-8"
+    )

@@ -15,6 +15,8 @@ from agentharness.scan_models import ExcludedPath, IncludedFile, RepositoryInven
 DEFAULT_MAX_FILE_BYTES = 1_000_000
 AGENTHARNESS_IGNORE = ".agentharnessignore"
 
+# ponytail: vendored code is excluded by directory name, so a first-party package that happens
+# to be called `vendor` is skipped too. Add a per-repository include list if that becomes real.
 DEFAULT_EXCLUDED_DIRS = {
     ".agentharness",
     ".git",
@@ -25,9 +27,31 @@ DEFAULT_EXCLUDED_DIRS = {
     ".tox",
     ".venv",
     "__pycache__",
+    "bower_components",
+    ".eggs",
+    "env",
     "node_modules",
+    "site-packages",
+    "third_party",
+    "vendor",
+    "vendored",
+    "venv",
 }
-SECRET_VALUE_PATTERN = re.compile(r"sk-[A-Za-z0-9_-]{8,}")
+# A secret is a credential *name* followed by a credential-shaped *value*. Matching the name
+# alone flags every README and .env.example that documents which variables to set.
+# Value must stay on the assignment's own line: `\s` would let `KEY=\nNEXT_VAR` capture the
+# following variable name as if it were a secret.
+SECRET_ASSIGNMENT_PATTERN = re.compile(
+    r"(?:OPENAI_API_KEY|GROQ_API_KEY|HF_TOKEN|ANTHROPIC_API_KEY|AWS_SECRET_ACCESS_KEY)"
+    r"[ \t]*[=:][ \t]*[\"']?([A-Za-z0-9_\-/+]{16,})"
+)
+PEM_PATTERN = re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")
+SECRET_VALUE_PATTERN = re.compile(r"\bsk-[A-Za-z0-9_-]{16,}")
+PLACEHOLDER_PATTERN = re.compile(
+    r"your|example|placeholder|changeme|change_me|dummy|sample|insert|replace|"
+    r"xxx|\.\.\.|here|todo|redact|fake|test|abc123|<|\{\{",
+    re.IGNORECASE,
+)
 
 SECRET_NAMES = {
     ".env",
@@ -207,16 +231,17 @@ def _looks_secret(path: Path) -> bool:
 
 def _looks_secret_content(sample: bytes) -> bool:
     text = sample.decode("utf-8", errors="ignore")
-    markers = (
-        "-----BEGIN PRIVATE KEY-----",
-        "OPENAI_API_KEY=",
-        "GROQ_API_KEY=",
-        "HF_TOKEN=",
-        "AWS_SECRET_ACCESS_KEY=",
-    )
-    return (
-        any(marker in text for marker in markers) or SECRET_VALUE_PATTERN.search(text) is not None
-    )
+    if PEM_PATTERN.search(text) is not None:
+        return True
+    for match in SECRET_ASSIGNMENT_PATTERN.finditer(text):
+        if not _is_placeholder(match.group(1)):
+            return True
+    return any(not _is_placeholder(match.group(0)) for match in SECRET_VALUE_PATTERN.finditer(text))
+
+
+def _is_placeholder(value: str) -> bool:
+    """True when a credential-shaped string is documentation rather than a live secret."""
+    return PLACEHOLDER_PATTERN.search(value) is not None or len(set(value)) < 6
 
 
 def _language_for(path: Path) -> str:
