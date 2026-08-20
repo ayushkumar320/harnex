@@ -24,13 +24,17 @@ Target repository
 
 ## Intended Workflow
 
-Start with the two orchestrating commands. They compose the low-level commands below and need no
-credentials.
+Install it, then run it from inside your repository. No credentials needed.
 
 ```bash
-harness audit .     # read-only: scan and plan in one command
-harness improve .   # audit, stage a diff, ask for approval, apply, then verify
-harness check .     # non-interactive CI gate, exits 1 on findings at or above --fail-on
+uv tool install agentharness   # or: pipx install agentharness
+```
+
+```bash
+harness            # read-only audit of the current directory (same as `harness audit .`)
+harness improve    # audit, stage a diff, ask for approval, apply, then verify
+harness check --fail-on high   # non-interactive CI gate, exits 1 on findings
+harness report     # render findings as Markdown to hand to a coding agent
 ```
 
 `improve` asks twice: once to approve the plan, once to apply the exact staged files. Declining

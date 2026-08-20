@@ -33,7 +33,12 @@ from agentharness.planning import (
     render_plan_summary,
     write_plan,
 )
-from agentharness.reporter import canonical_json, render_human_summary, write_report
+from agentharness.reporter import (
+    canonical_json,
+    render_human_summary,
+    write_markdown_report,
+    write_report,
+)
 from agentharness.scan import scan_repository
 from agentharness.scan_models import AuditReport
 from agentharness.verification import (
@@ -53,7 +58,12 @@ from agentharness.workflows import (
 
 app = typer.Typer(
     name="harness",
-    help="Audit AI agent repositories first, then generate reviewable reliability controls.",
+    help=(
+        "Audit AI agent repositories first, then generate reviewable reliability controls.\n\n"
+        "Run `harness` for a read-only audit of the current directory, "
+        "`harness improve` to apply reviewed fixes, and `harness check --fail-on high` in CI. "
+        "The scan/plan/approve/apply/verify commands are the scriptable stages behind those."
+    ),
     no_args_is_help=False,
     add_completion=False,
 )
@@ -107,20 +117,15 @@ def main(
             )
         )
         configure_logging(config.log_level)
-        console = make_console(color=ColorMode(config.color), quiet=quiet)
         if ctx.invoked_subcommand is None:
-            if OutputFormat(config.output_format) is OutputFormat.JSON:
-                print_json(
-                    console,
-                    {
-                        "schema_version": "1.0",
-                        "command": "root",
-                        "status": "ok",
-                        "message": "No product command selected.",
-                    },
-                )
-            else:
-                console.print(ctx.get_help())
+            # Bare `harness` is the read-only front door: audit the current directory.
+            audit(
+                output_format=output_format,
+                config_path=config_path,
+                color=color,
+                verbose=verbose,
+                quiet=quiet,
+            )
     except AgentHarnessError as exc:
         _render_cli_error(exc, output_format=output_format, color=color, verbose=verbose)
         raise typer.Exit(exc.exit_code) from exc
@@ -570,6 +575,42 @@ def benchmark(
     except AgentHarnessError as exc:
         _render_cli_error(exc, output_format=output_format, color=color, verbose=verbose)
         raise typer.Exit(exc.exit_code) from exc
+
+
+@app.command()
+def report(
+    scan_path: Annotated[
+        Path,
+        typer.Argument(help="Scan artifact to render."),
+    ] = Path(".agentharness/scan.json"),
+    output: Annotated[
+        Path,
+        typer.Option("--output", "-o", help="Markdown file to write."),
+    ] = Path(".agentharness/findings.md"),
+    quiet: Annotated[
+        bool,
+        typer.Option("--quiet", "-q", help="Suppress non-essential human output."),
+    ] = False,
+) -> None:
+    """Render a scan artifact as a Markdown brief you can hand to a coding agent."""
+    if not scan_path.exists():
+        error = AgentHarnessError(
+            code="AH-C002",
+            message=f"No scan artifact at {scan_path}. Run harness audit first.",
+            exit_code=3,
+        )
+        _render_cli_error(error, output_format=None, color=None, verbose=False)
+        raise typer.Exit(error.exit_code)
+    audit_report = AuditReport.model_validate_json(scan_path.read_text(encoding="utf-8"))
+    write_markdown_report(
+        output,
+        audit_report,
+        repository_path=Path(audit_report.repository.root),
+    )
+    if not quiet:
+        console = make_console(color=ColorMode.AUTO, quiet=quiet)
+        active = len([f for f in audit_report.findings if not f.suppressed])
+        console.print(f"Wrote {active} finding(s) to {output}")
 
 
 @app.command()
