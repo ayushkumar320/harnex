@@ -82,6 +82,10 @@ AgentHarness will report unsupported patterns instead of silently generating cod
 
 ## Install
 
+New here? [BOOTSTRAP.md](BOOTSTRAP.md) is a plain-language walkthrough for trying AgentHarness on a
+real repository.
+
+
 AgentHarness is a Python 3.12/3.13 CLI. Install it with `pipx` (or `uv tool`):
 
 ```bash
