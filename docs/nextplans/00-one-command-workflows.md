@@ -84,7 +84,7 @@ Act as:
 3. A safety-focused UX engineer ensuring one command never becomes invisible approval for mutation or execution.
 
 Before editing:
-- Read AGENTS.md, product vision, user experience, security model, docs/build/README.md, this phase, and every prerequisite completion record.
+- Read AGENTS.md, product vision, user experience, security model, this phase, and every prerequisite completion record.
 - Run all prerequisite gates and inspect the real scan, plan, apply, and verify APIs.
 - State which stages exist. Do not create placeholder success for an unimplemented stage.
 

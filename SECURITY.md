@@ -7,7 +7,7 @@ public disclosure.
 
 | Version | Support |
 | --- | --- |
-| `0.1.0a1` | Security fixes accepted for the alpha code line |
+| `0.1.0a2` | Security fixes accepted for the alpha code line |
 
 ## Reporting
 

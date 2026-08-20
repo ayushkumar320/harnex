@@ -318,7 +318,6 @@ The benchmark distinguishes static detection metrics from generation and verific
 - [Security model](docs/architecture/security.md)
 - [Development setup](docs/development/setup.md)
 - [CI usage](docs/development/ci.md)
-- [Phase-by-phase build plan](docs/build/README.md)
 - [Final-year and product-extension plans](docs/nextplans/README.md)
 - [Agent contribution contract](AGENTS.md)
 

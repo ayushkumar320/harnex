@@ -78,15 +78,19 @@ uv run harness plan .agentharness/scan.json --output .agentharness/plan.json
 plan also exits `4` after writing the plan artifact, so CI systems should upload
 `.agentharness/plan.json` on failure for review.
 
-## Fixture Precision Snapshot
+## Precision
 
-The Phase 3 labeled fixtures were measured on 2026-07-16:
+There is no measured precision figure for AgentHarness on real repositories, and the fixture
+corpus cannot supply one: the fixtures are hand-written to contain the patterns the detectors look
+for, so agreement between them is a regression check, not evidence.
 
-| Fixture | Labeled reportable findings | Reported findings | False positives |
-| --- | ---: | ---: | ---: |
-| `basic_agent` | 1 `AH-R101` | 1 | 0 |
-| `edge_cases` | 2 `AH-S101`, 1 `AH-S201`, 1 `AH-U101` | 4 | 0 |
-| `unsupported_text` | 0 | 0 | 0 |
+What is known from running the scanner across six real repositories on 2026-08-20:
 
-Initial fixture precision: `5 / 5 = 1.00`. The unsupported fixture remains useful coverage for
-status and inventory behavior, but it has no reportable Python findings.
+- `AH-S201` produced no false positives after secret detection was changed to require a
+  credential-shaped value rather than a credential name.
+- `AH-R102` and `AH-S101` match every broad `except Exception` and every filesystem write or
+  subprocess call. Those matches are accurate but high volume, and many flagged sites are
+  deliberate. They are a review queue, not a defect count.
+
+Producing a defensible precision number requires hand-labeling the output on a corpus of real
+agent repositories. Until that exists, do not publish a precision claim.

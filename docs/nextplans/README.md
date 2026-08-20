@@ -1,8 +1,7 @@
 # Next Plans: Final-Year Product Extensions
 
 This directory contains optional extensions that can turn the AgentHarness baseline into a
-measurable final-year project. These plans do not replace or reorder
-[`docs/build/`](../build/README.md). A next-plan phase begins only after its listed baseline
+measurable final-year project. A next-plan phase begins only after its listed baseline
 prerequisites have passed and their completion records are current.
 
 The academic and product thesis is:

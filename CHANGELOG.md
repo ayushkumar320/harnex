@@ -1,7 +1,29 @@
 # Changelog
 
-## Unreleased
+## 0.1.0a2
 
+- Excluded vendored dependencies from the scan. `DEFAULT_EXCLUDED_DIRS` covered `.venv` and
+  `node_modules` but not `vendor`, `venv`, `env`, `site-packages`, `third_party`,
+  `bower_components`, or `.eggs`, so third-party code was audited as if it were first-party. On one
+  measured repository 15,725 of 16,505 findings came from `vendor/`.
+- Fixed `AH-S201` false positives on documentation. Secret detection matched credential names
+  rather than credential values, so any README or `.env.example` documenting
+  `GROQ_API_KEY=your_groq_api_key` was flagged and silently excluded from analysis.
+  `_looks_secret_content` now requires a credential name followed by a credential-shaped value on
+  the same line and rejects placeholder values. Restricting the value to its own line matters:
+  `\s` would let `KEY=\nNEXT_VAR` capture the following variable name. The PEM check is now one
+  contiguous pattern, so a secret scanner carrying `-----BEGIN ` and `PRIVATE KEY-----` as separate
+  constants no longer flags its own source. Measured across six repositories, total findings fell
+  from 16,798 to 1,016 and `AH-S201` false positives to zero.
+- Added `harness report`, which renders a scan artifact as a Markdown brief grouped by severity
+  with file, line, and symbol evidence per finding. Generation covers only `AH-R101`, so on most
+  repositories the findings are the whole deliverable.
+- Bare `harness` now runs a read-only audit of the current directory instead of printing help.
+- Corrected the project URLs in `pyproject.toml` and `npm/package.json`, which pointed at a
+  repository that does not exist.
+- Rewrote the README and the npm README around the failure modes the tool detects, a walkthrough
+  with real output, and an explicit statement of what the tool does not do.
+- Removed `docs/build/`, the phase-by-phase implementation plans, now that the baseline is built.
 - Added `harness audit`, `harness improve`, and `harness check`: one-command workflows that compose
   the existing scan, plan, approve, apply, and verify primitives and record a versioned
   `workflow_run` artifact at `.agentharness/workflow.json`. `audit` stays read-only, and `improve`

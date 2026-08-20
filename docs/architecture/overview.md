@@ -184,4 +184,3 @@ An adapter moves to `verified` only after:
 - [Model providers](model-providers.md)
 - [External evidence](external-evidence.md)
 - [Product scope](../product/scope.md)
-- [Build plan](../build/README.md)

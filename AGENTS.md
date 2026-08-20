@@ -25,7 +25,6 @@ Before implementing a phase:
 
 1. Read this file.
 2. Read [`docs/product/vision.md`](docs/product/vision.md), [`docs/product/user-experience.md`](docs/product/user-experience.md), and [`docs/architecture/security.md`](docs/architecture/security.md).
-3. Read the active phase document under [`docs/build/`](docs/build/README.md).
 4. Inspect the current code and tests; do not assume the phase document is perfectly current.
 5. State the scope and acceptance gates before broad edits.
 6. Implement the smallest coherent vertical slice.
@@ -104,7 +103,6 @@ tests/                  unit, contract, integration, and fixture tests
 docs/product/           product intent and user experience
 docs/architecture/      system contracts and security design
 docs/development/       local and container workflows
-docs/build/             phase plans and implementation prompts
 docs/nextplans/         optional prerequisite-gated product and final-year extensions
 ```
 

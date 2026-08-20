@@ -45,10 +45,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ayushkumar/agentharness"
-Repository = "https://github.com/ayushkumar/agentharness"
-Changelog = "https://github.com/ayushkumar/agentharness/blob/main/CHANGELOG.md"
-Issues = "https://github.com/ayushkumar/agentharness/issues"
+Homepage = "https://github.com/ayushkumar320/harnex"
+Repository = "https://github.com/ayushkumar320/harnex"
+Changelog = "https://github.com/ayushkumar320/harnex/blob/main/CHANGELOG.md"
+Issues = "https://github.com/ayushkumar320/harnex/issues"
 
 [project.scripts]
 harness = "agentharness.cli:app"

@@ -7,12 +7,12 @@ This directory is the source of truth for product intent, architecture, developm
 | Reader | Recommended path |
 | --- | --- |
 | New contributor | [Vision](product/vision.md) -> [User experience](product/user-experience.md) -> [Architecture](architecture/overview.md) -> [Setup](development/setup.md) |
-| Product reviewer | [Vision](product/vision.md) -> [Scope](product/scope.md) -> [Build plan](build/README.md) |
+| Product reviewer | [Vision](product/vision.md) -> [Scope](product/scope.md) |
 | Final-year project reviewer | [Next plans](nextplans/README.md) -> [Benchmark and evaluation](nextplans/06-benchmark-and-final-evaluation.md) |
-| Security reviewer | [Security model](architecture/security.md) -> [Architecture](architecture/overview.md) -> [Sandbox phase](build/06-sandbox-enforcement.md) |
+| Security reviewer | [Security model](architecture/security.md) -> [Architecture](architecture/overview.md) |
 | Implementation agent | [AGENTS.md](../AGENTS.md) -> active phase document -> linked architecture references |
-| Model-provider contributor | [Provider strategy](architecture/model-providers.md) -> [Provider phase](build/02-provider-and-retrieval.md) |
-| Web-evidence contributor | [External evidence](architecture/external-evidence.md) -> [Provider and retrieval phase](build/02-provider-and-retrieval.md) |
+| Model-provider contributor | [Provider strategy](architecture/model-providers.md) |
+| Web-evidence contributor | [External evidence](architecture/external-evidence.md) |
 
 ## Product
 
@@ -37,7 +37,6 @@ This directory is the source of truth for product intent, architecture, developm
 
 ## Build
 
-- [Build-plan index](build/README.md): phase order, dependencies, milestones, and delivery rules
 - Every phase has a self-contained Codex prompt, acceptance gates, product outcome, and UX target.
 
 ## Next Plans
