@@ -101,7 +101,10 @@ CATALOG: dict[str, CatalogRule] = {
         ),
         severity=Severity.HIGH,
         generation=GenerationState.REVIEW_REQUIRED,
-        remediation="Add bounded provider routing, structured logging, and response validation.",
+        remediation=(
+            "Wrap the client once with agentharness.wrap(client), or add a request timeout "
+            "and a bounded retry budget by hand."
+        ),
         next_action=(
             "Run harness plan on this scan artifact and review the instrumentation action."
         ),
@@ -115,6 +118,21 @@ CATALOG: dict[str, CatalogRule] = {
         remediation="Catch normalized failure classes and preserve structured error evidence.",
         next_action="Review the handler and narrow the caught exception types.",
     ),
+    "AH-R103": CatalogRule(
+        title="Unbounded retry loop can never terminate",
+        description=(
+            "A while True loop retries after an exception handler that neither breaks, "
+            "returns, nor re-raises."
+        ),
+        impact=(
+            "A persistent provider or tool failure spins forever, burning tokens, quota, "
+            "and wall-clock time with no exit."
+        ),
+        severity=Severity.HIGH,
+        generation=GenerationState.BLOCKED,
+        remediation="Bound the loop with an attempt budget and re-raise once it is exhausted.",
+        next_action="Add a maximum attempt count and a terminal failure path to the loop.",
+    ),
     "AH-S101": CatalogRule(
         title="Tool side effect has no enforceable boundary",
         description="A shell, process, or filesystem write side effect was detected.",
@@ -123,7 +141,10 @@ CATALOG: dict[str, CatalogRule] = {
         ),
         severity=Severity.HIGH,
         generation=GenerationState.BLOCKED,
-        remediation="Classify the side effect and run future verification in an enforced sandbox.",
+        remediation=(
+            "Declare the side effect with the agentharness.tool decorator, which sets its "
+            "retry and commit-status rules, or document it as read-only."
+        ),
         next_action="Review the side effect and document whether it is read-only or idempotent.",
     ),
     "AH-S201": CatalogRule(
@@ -161,6 +182,10 @@ def derive_findings(
     findings: list[Finding] = []
     for fact in facts:
         if fact.kind == "model_call_candidate":
+            # The rule reports calls with *no detected* instrumentation. A call with a timeout,
+            # a retry budget, or a retry decorator in scope has some, so it is not a finding.
+            if fact.guarded:
+                continue
             findings.append(
                 _from_fact(
                     "AH-R101",
@@ -168,9 +193,17 @@ def derive_findings(
                     ["deterministic_ast_match", "known_provider_symbol"],
                 )
             )
+        elif fact.kind == "unbounded_retry_loop":
+            findings.append(
+                _from_fact("AH-R103", fact, ["deterministic_ast_match", "no_handler_exit"])
+            )
         elif fact.kind == "broad_exception_handler":
             findings.append(_from_fact("AH-R102", fact, ["deterministic_ast_match"]))
         elif fact.kind == "side_effect_candidate":
+            # A side effect inside an @tool function already declares its classification and
+            # runs under the retry and commit-status rules, so it has its enforceable boundary.
+            if fact.guarded:
+                continue
             findings.append(
                 _from_fact("AH-S101", fact, ["deterministic_ast_match", "known_side_effect_symbol"])
             )

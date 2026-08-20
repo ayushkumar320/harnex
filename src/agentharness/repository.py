@@ -118,7 +118,11 @@ def build_inventory(
             )
             if reason is not None:
                 excluded.append(ExcludedPath(path=rel, reason=reason))
-                continue
+                # A Python file carrying a credential-shaped literal is exactly where gaps
+                # cluster. Report the secret, but keep the file in structural analysis: facts
+                # record symbols and line numbers, never source text.
+                if not (reason == "secret_content" and path.suffix == ".py"):
+                    continue
 
             data = path.read_bytes()
             included.append(

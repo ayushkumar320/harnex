@@ -61,6 +61,48 @@
       "path": "tests/fixtures/benchmark/syntax_error",
       "held_out": true,
       "expected": {"model_call_candidates": 0, "side_effect_candidates": 0, "unknown_dynamic_patterns": 0, "parse_failures": 1, "finding_rules": []}
+    },
+    {
+      "id": "anthropic_direct",
+      "path": "tests/fixtures/benchmark/anthropic_direct",
+      "held_out": false,
+      "expected": {"model_call_candidates": 1, "side_effect_candidates": 0, "unknown_dynamic_patterns": 0, "parse_failures": 0, "finding_rules": ["AH-R101"]}
+    },
+    {
+      "id": "instrumented_openai",
+      "path": "tests/fixtures/benchmark/instrumented_openai",
+      "held_out": true,
+      "expected": {"model_call_candidates": 1, "side_effect_candidates": 0, "unknown_dynamic_patterns": 0, "parse_failures": 0, "finding_rules": []}
+    },
+    {
+      "id": "unbounded_retry",
+      "path": "tests/fixtures/benchmark/unbounded_retry",
+      "held_out": false,
+      "expected": {"model_call_candidates": 1, "side_effect_candidates": 0, "unknown_dynamic_patterns": 0, "parse_failures": 0, "finding_rules": ["AH-R101", "AH-R102", "AH-R103"]}
+    },
+    {
+      "id": "provider_named_local",
+      "path": "tests/fixtures/benchmark/provider_named_local",
+      "held_out": true,
+      "expected": {"model_call_candidates": 0, "side_effect_candidates": 0, "unknown_dynamic_patterns": 0, "parse_failures": 0, "finding_rules": []}
+    },
+    {
+      "id": "secret_in_module",
+      "path": "tests/fixtures/benchmark/secret_in_module",
+      "held_out": false,
+      "expected": {"model_call_candidates": 0, "side_effect_candidates": 1, "unknown_dynamic_patterns": 0, "parse_failures": 0, "finding_rules": ["AH-S101", "AH-S201"]}
+    },
+    {
+      "id": "wrapped_client",
+      "path": "tests/fixtures/benchmark/wrapped_client",
+      "held_out": true,
+      "expected": {"model_call_candidates": 1, "side_effect_candidates": 0, "unknown_dynamic_patterns": 0, "parse_failures": 0, "finding_rules": []}
+    },
+    {
+      "id": "declared_tool",
+      "path": "tests/fixtures/benchmark/declared_tool",
+      "held_out": true,
+      "expected": {"model_call_candidates": 0, "side_effect_candidates": 2, "unknown_dynamic_patterns": 0, "parse_failures": 0, "finding_rules": []}
     }
   ]
 }

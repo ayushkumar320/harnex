@@ -92,5 +92,13 @@ What is known from running the scanner across six real repositories on 2026-08-2
   subprocess call. Those matches are accurate but high volume, and many flagged sites are
   deliberate. They are a review queue, not a defect count.
 
+- `AH-R101` reports one finding per unguarded provider call. Detection is import-gated and
+  covers OpenAI, Anthropic, Bedrock, Gemini, Groq, Mistral, Cohere, LiteLLM, Ollama, and
+  Hugging Face call shapes. Providers reached through a wrapper library that renames the method
+  chain are not detected.
+- `AH-R103` matched 3 sites across 537 Python files in one real repository and no fixture
+  negatives, so it is low volume by construction. It only fires on `while True` plus a handler
+  with no exit.
+
 Producing a defensible precision number requires hand-labeling the output on a corpus of real
 agent repositories. Until that exists, do not publish a precision claim.

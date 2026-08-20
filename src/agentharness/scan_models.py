@@ -55,6 +55,7 @@ class StructuralFact(BaseModel):
     column: int | None = None
     symbol: str | None = None
     detail: str | None = None
+    guarded: bool = False
     adapter_candidates: list[str] = Field(default_factory=list)
 
 

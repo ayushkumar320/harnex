@@ -1,10 +1,24 @@
 # AgentHarness
 
-AgentHarness is a read-only auditor for AI agent repositories. It finds the reliability and safety
-gaps that agent projects share — unbounded provider retries, unguarded side effects, swallowed
-exceptions, leaked secrets — and reports them with file, line, and symbol evidence.
+AgentHarness is the reliability layer an agent needs before it ships: a bounded, logged,
+failure-classified wrapper around your provider client, plus an auditor that finds the code that
+still needs one.
 
-It never edits your source. Everything it writes lives in a `.agentharness/` directory.
+```python
+from openai import OpenAI
+
+from agentharness import wrap
+
+client = wrap(OpenAI())
+```
+
+That is the whole adoption cost. `client` keeps the SDK's own API — every attribute and method
+passes straight through — but provider calls now carry a request timeout, a bounded retry budget
+with backoff, normalized failure classification, and a redacted JSONL event per attempt. No
+timeouts to plumb, no retry loop to hand-roll, no code generation.
+
+Run `harness` to find the calls that are not wrapped yet. The auditor never edits your source;
+everything it writes lives in a `.agentharness/` directory.
 
 > **Project status:** public-alpha candidate. The current implementation supports a narrow Python
 > 3.12 static-audit workflow, constrained direct-provider generation, runtime reliability fixtures,
@@ -21,7 +35,90 @@ nothing. An API key ends up in a log line.
 None of this is exotic. Every agent project rediscovers the same list, usually after an incident.
 AgentHarness is the checklist, run against your actual code instead of your memory.
 
-It is the thing you run **before** you ship an agent, and in CI so it stays fixed.
+It is the thing you run **before** you ship an agent, and in CI so it stays fixed. The auditor
+names the gap; `wrap` closes it in one line.
+
+## The Harness
+
+`wrap(client)` returns a proxy that guards only the calls it recognizes as provider calls — the
+same method-chain table the static scanner uses, so `harness scan` and `wrap` always agree on what
+counts. Everything else on the client is untouched.
+
+```python
+from agentharness import wrap
+
+client = wrap(
+    OpenAI(),
+    timeout=30,             # request timeout, injected only if the callee accepts one
+    max_attempts=3,         # hard attempt ceiling
+    budget_seconds=90,      # wall-clock ceiling across all attempts
+    log_path=".agentharness/runtime.jsonl",   # None to disable
+)
+```
+
+What it does on a failure:
+
+- classifies the provider exception into a normalized kind — `timeout_before_response`,
+  `rate_limited`, `provider_unavailable`, `authentication_failed`, `invalid_request`, and the rest;
+- retries only the kinds worth retrying, with exponential backoff and any `Retry-After` the
+  provider sent. An auth failure or a malformed request fails on the first attempt, because
+  retrying it is just a slower error;
+- stops at whichever ceiling comes first, the attempt count or the elapsed budget, then raises
+  `GuardedCallFailed` with the original provider exception as its `__cause__`;
+- writes one redacted JSONL event per attempt, so a failure has evidence instead of a guess.
+
+For a provider reached through a helper of your own, the decorator form does the same thing:
+
+```python
+from agentharness import guard
+
+
+@guard(timeout=30, max_attempts=3)
+def ask(prompt: str) -> str:
+    ...
+```
+
+A wrapped client satisfies `AH-R101`: audit the repository again and the finding is gone.
+
+### Tools
+
+A provider call is safe to retry. A tool that sends an email is not. `tool` makes you say which,
+once, and then enforces it:
+
+```python
+from agentharness import tool
+
+
+@tool(side_effect="read_only")
+def search(query: str) -> list[str]:
+    ...
+
+
+@tool(side_effect="idempotent", idempotency_key=lambda path, data: path)
+def write_file(path: str, data: str) -> None:
+    ...
+
+
+@tool(side_effect="non_idempotent")
+def send_email(to: str, body: str) -> None:
+    ...
+```
+
+- **read_only** and **idempotent** tools are retried on a transient failure. An idempotent tool
+  must supply an `idempotency_key`; once a key has committed in this process, a repeat call
+  returns the recorded result instead of running again. That is the "the retry wrote the file
+  twice" bug, closed.
+- **non_idempotent** tools are never retried. If one fails, whether it committed is genuinely
+  unknowable from the outside, so the call raises `CommitStatusUnknown` and says so, rather than
+  handing you a silent duplicate or a silent loss.
+- **unknown** is the default, and behaves like non_idempotent. An undeclared side effect is not
+  safe to retry, so the default is the safe one.
+
+Set `AGENTHARNESS_DRY_RUN=1` and every mutating tool raises `DryRunBlocked` and records the
+intent it would have performed, while read-only tools still run. Useful for a first run against
+production data.
+
+A declared tool satisfies `AH-S101`.
 
 ## What It Finds
 
@@ -29,12 +126,18 @@ It is the thing you run **before** you ship an agent, and in CI so it stays fixe
 | --- | --- | --- |
 | `AH-R101` | high | A model-provider call with no detected reliability instrumentation |
 | `AH-R102` | medium | A broad `except Exception` that can hide provider or tool failures |
-| `AH-S101` | high | A shell, process, or filesystem write with no enforceable boundary |
+| `AH-R103` | high | A `while True` retry loop whose handler never exits, so it can spin forever |
+| `AH-S101` | high | A shell, process, or filesystem write outside a declared `@tool` |
 | `AH-S201` | medium | A file containing a credential-shaped value, excluded from analysis |
 | `AH-U101` | low | Dynamic import or lookup that static analysis cannot resolve |
 
 Every finding carries evidence: the file, the line, the symbol that triggered it, and a confidence
 score. Nothing is inferred from a model.
+
+`AH-R101` recognizes OpenAI, Anthropic, Bedrock, Gemini, Groq, Mistral, Cohere, LiteLLM, Ollama,
+and Hugging Face call shapes, and stays quiet when the call already has a timeout, a retry budget,
+or a retry decorator in scope. It detects that a control is present, not that it is correct: a
+`timeout=99999` silences the rule.
 
 ## Install
 
